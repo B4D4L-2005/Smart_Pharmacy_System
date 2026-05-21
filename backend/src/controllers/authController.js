@@ -283,15 +283,11 @@ export async function sendOTP(req, res) {
       }
     }
 
-    const prefilledText = encodeURIComponent(`Your RxSmart Pharmacy Shop verification code is *${otpCode}*.\n\nValid for 2 minutes. Enter this code in your browser.`);
-    const waLink = `https://wa.me/${phoneNumber.replace(/[^0-9]/g, '')}?text=${prefilledText}`;
-
     res.json({
       message: realSMSSent 
         ? `OTP sent successfully to ${phoneNumber} via ${providerName}.` 
         : `OTP sent successfully to ${phoneNumber} (Simulated).`,
-      otpCode, // Returning the code to the frontend for ease-of-use/testing in demo
-      whatsappLink: waLink
+      otpCode // Returning the code to the frontend for ease-of-use/testing in demo
     });
   } catch (error) {
     res.status(500).json({ message: 'Error generating OTP.', error: error.message });
@@ -406,5 +402,45 @@ export async function verifyOTPRegister(req, res) {
     });
   } catch (error) {
     res.status(500).json({ message: 'Error verifying signup OTP.', error: error.message });
+  }
+}
+
+export async function restoreUser(req, res) {
+  try {
+    const { email, password, username, shopName, shopPhone, shopAddress, gstin } = req.body;
+    if (!email || !username || !shopName || !shopPhone) {
+      return res.status(400).json({ message: 'Missing parameters for user restoration.' });
+    }
+
+    // Check if user already exists in db
+    const users = await db.users.raw();
+    const existingUser = users.find(u => u.shopDetails?.phone === shopPhone || u.email === email.toLowerCase());
+    if (existingUser) {
+      return res.status(200).json({ message: 'User already exists, no restoration needed.', user: existingUser });
+    }
+
+    // Save user with shop details directly (password is already hashed in local backup)
+    let hashedPassword = password;
+    if (password && !password.startsWith('$2a$') && !password.startsWith('$2b$')) {
+      const salt = await bcrypt.genSalt(10);
+      hashedPassword = await bcrypt.hash(password, salt);
+    }
+
+    const newUser = await db.users.insert({
+      email: email.toLowerCase(),
+      password: hashedPassword || '',
+      username,
+      shopDetails: {
+        name: shopName,
+        phone: shopPhone,
+        address: shopAddress || '',
+        gstin: gstin || ''
+      }
+    });
+
+    console.log(`[Backup System] Restored user account for shop ${shopName} (${shopPhone})`);
+    res.status(201).json({ message: 'User restored successfully.', user: newUser });
+  } catch (error) {
+    res.status(500).json({ message: 'Error restoring user.', error: error.message });
   }
 }

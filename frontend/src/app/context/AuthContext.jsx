@@ -72,6 +72,10 @@ export function AuthProvider({ children }) {
     try {
       const data = await api.auth.verifyOTPRegister(signUpData);
       setUser(data.user);
+
+      // Backup registered user credentials locally for auto-restoration upon Render instance spin-downs
+      localStorage.setItem(`rxsmart_user_backup_${signUpData.phoneNumber}`, JSON.stringify(signUpData));
+
       return data;
     } catch (error) {
       setUser(null);

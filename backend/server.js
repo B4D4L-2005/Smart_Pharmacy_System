@@ -2,7 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { authenticateToken } from './src/middleware/auth.js';
-import { signup, login, getProfile, updateProfile, sendOTP, verifyOTPLogin, verifyOTPRegister } from './src/controllers/authController.js';
+import { signup, login, getProfile, updateProfile, sendOTP, verifyOTPLogin, verifyOTPRegister, restoreUser } from './src/controllers/authController.js';
 import { createMedicine, getMedicines, getMedicineById, updateMedicine, deleteMedicine, triggerScan } from './src/controllers/medicineController.js';
 import { createBill, getBills, getBillById } from './src/controllers/billingController.js';
 import { getDashboardStats, getDetailedReports } from './src/controllers/reportController.js';
@@ -37,6 +37,7 @@ app.get('/', (req, res) => {
 app.post('/api/auth/signup', signup);
 app.post('/api/auth/login', login);
 app.post('/api/auth/send-otp', sendOTP);
+app.post('/api/auth/restore', restoreUser);
 app.post('/api/auth/verify-otp-login', verifyOTPLogin);
 app.post('/api/auth/verify-otp-register', verifyOTPRegister);
 

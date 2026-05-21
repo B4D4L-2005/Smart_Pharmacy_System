@@ -107,6 +107,13 @@ export const api = {
       localStorage.removeItem('pharmacy_token');
     },
 
+    async restoreUser(data) {
+      return await request('/auth/restore', {
+        method: 'POST',
+        body: JSON.stringify(data)
+      });
+    },
+
     isAuthenticated() {
       return !!localStorage.getItem('pharmacy_token');
     }

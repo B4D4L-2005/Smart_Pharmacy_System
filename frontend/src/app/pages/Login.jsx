@@ -25,12 +25,35 @@ export function Login({ onNavigate }) {
 
     setLoading(true);
     try {
-      const res = await api.auth.sendOTP(phone, false);
-      setOtpSent(true);
-      if (res.whatsappLink) {
-        setWhatsappLink(res.whatsappLink);
-        window.open(res.whatsappLink, '_blank');
+      let res;
+      try {
+        res = await api.auth.sendOTP(phone, false);
+      } catch (err) {
+        // If the backend has reset and the user is not found, restore the user silently using local backups
+        if (err.message && (err.message.toLowerCase().includes('not registered') || err.message.toLowerCase().includes('not found'))) {
+          const backupDataStr = localStorage.getItem(`rxsmart_user_backup_${phone}`);
+          if (backupDataStr) {
+            console.log('[Auth] Render database reset detected. Restoring user store profile...');
+            const backupData = JSON.parse(backupDataStr);
+            await api.auth.restoreUser({
+              email: backupData.email,
+              password: backupData.password,
+              username: backupData.username,
+              shopName: backupData.shopName,
+              shopPhone: backupData.phoneNumber,
+              shopAddress: backupData.shopAddress,
+              gstin: backupData.gstin
+            });
+            // Retry sending OTP after restoration
+            res = await api.auth.sendOTP(phone, false);
+          } else {
+            throw err;
+          }
+        } else {
+          throw err;
+        }
       }
+      setOtpSent(true);
       showToast(`SMS Simulator: Verification code is ${res.otpCode} (valid for 2 mins)`, 'success');
     } catch (err) {
       showToast(err.message || 'Failed to send OTP code.', 'danger');
@@ -147,29 +170,7 @@ export function Login({ onNavigate }) {
                 />
               </div>
 
-              {whatsappLink && (
-                <a
-                  href={whatsappLink}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="glass-btn"
-                  style={{
-                    marginTop: '8px',
-                    background: '#25d366',
-                    color: '#ffffff',
-                    boxShadow: '0 4px 12px rgba(37, 211, 102, 0.25)',
-                    fontSize: '12px',
-                    height: '36px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '8px',
-                    textDecoration: 'none'
-                  }}
-                >
-                  Receive OTP on WhatsApp
-                </a>
-              )}
+
 
               <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '4px' }}>
                 <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Simulated SMS OTP</span>

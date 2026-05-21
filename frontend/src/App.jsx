@@ -141,13 +141,13 @@ function AppContent() {
       <Sidebar currentPage={currentPage} setCurrentPage={setCurrentPage} isOpen={sidebarOpen} setIsOpen={setSidebarOpen} />
 
       {/* Main Workspace Frame */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100vh', overflowY: 'auto' }}>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}>
         
         {/* Top Navbar */}
         <Navbar title={getPageTitle()} onNavigate={setCurrentPage} onToggleSidebar={() => setSidebarOpen(!sidebarOpen)} />
 
         {/* Dynamic Inner Page Screen */}
-        <main style={{ flex: 1 }}>
+        <main style={{ flex: 1, overflowY: 'auto' }}>
           {renderActivePage()}
         </main>
 
