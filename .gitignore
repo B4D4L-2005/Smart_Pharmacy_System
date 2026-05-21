@@ -1,0 +1,15 @@
+# Node dependencies
+node_modules/
+package-lock.json
+
+# Environment variables
+.env
+*.env
+
+# Local database files / temp files
+backend/data/
+backend/delivery_logs/
+*.log
+.tmp
+dist/
+.DS_Store
