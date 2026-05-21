@@ -1,9 +1,29 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import nodemailer from 'nodemailer';
 import { db } from '../services/db.js';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'pharmacy-super-secret-key-12345';
 const TOKEN_EXPIRY = '24h';
+
+let emailTransporter = null;
+const initEmailTransporter = () => {
+  const emailUser = process.env.EMAIL_USER;
+  const emailPass = process.env.EMAIL_PASS;
+  if (emailUser && emailPass) {
+    emailTransporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: emailUser,
+        pass: emailPass
+      }
+    });
+    console.log('[OTP] Email Transporter (Gmail) initialized successfully.');
+  } else {
+    console.log('[OTP Warning] EMAIL_USER and EMAIL_PASS environment variables are not configured. Email simulator active.');
+  }
+};
+initEmailTransporter();
 
 export async function signup(req, res) {
   try {
@@ -166,214 +186,94 @@ function phonesMatch(phone1, phone2) {
   return p1 === p2;
 }
 
-// Helper to normalize phone number keys for activeOTPs map
-function normalizePhoneKey(phone) {
-  if (!phone) return '';
-  const digits = phone.replace(/[^0-9]/g, '');
-  if (digits.length >= 10) {
-    return digits.slice(-10);
-  }
-  return digits;
+// Normalize email key for activeOTPs map
+function normalizeEmailKey(email) {
+  return email ? email.trim().toLowerCase() : '';
 }
 
-// Normalize phone for Fast2SMS (expects exactly 10 digits without +91 or 91)
-function formatPhoneNumberForFast2SMS(phone) {
-  const clean = phone.replace(/[^0-9]/g, '');
-  if (clean.length >= 10) {
-    return clean.slice(-10);
-  }
-  return clean;
-}
-
-// Normalize phone for Twilio (expects E.164, e.g. +91XXXXXXXXXX)
-function formatPhoneNumberForTwilio(phone) {
-  let clean = phone.trim();
-  if (!clean.startsWith('+')) {
-    const digitsOnly = clean.replace(/[^0-9]/g, '');
-    if (digitsOnly.length === 10) {
-      clean = '+91' + digitsOnly;
-    } else if (digitsOnly.length === 12 && digitsOnly.startsWith('91')) {
-      clean = '+' + digitsOnly;
-    } else {
-      clean = '+' + digitsOnly;
-    }
-  } else {
-    clean = '+' + clean.replace(/[^0-9]/g, '');
-  }
-  return clean;
-}
-
-// Normalize phone for Vonage (expects digits only with country code, e.g. 91XXXXXXXXXX)
-function formatPhoneNumberForVonage(phone) {
-  const digitsOnly = phone.replace(/[^0-9]/g, '');
-  if (digitsOnly.length === 10) {
-    return '91' + digitsOnly;
-  }
-  return digitsOnly;
-}
-
-const activeOTPs = new Map(); // phoneLast10Digits -> { code, expires }
+const activeOTPs = new Map(); // emailKey -> { code, expires }
 
 export async function sendOTP(req, res) {
   try {
-    const { phoneNumber, isSignup } = req.body;
-    if (!phoneNumber) {
-      return res.status(400).json({ message: 'Phone number is required.' });
+    const { email, isSignup } = req.body;
+    if (!email) {
+      return res.status(400).json({ message: 'Email address is required.' });
     }
 
+    const emailKey = normalizeEmailKey(email);
+    
+    // Check if user exists in db by email
     const users = await db.users.raw();
-    const existingUser = users.find(u => u.shopDetails?.phone && phonesMatch(u.shopDetails.phone, phoneNumber));
+    const existingUser = users.find(u => u.email && u.email.toLowerCase() === emailKey);
 
     if (isSignup && existingUser) {
-      return res.status(400).json({ message: 'Phone number already registered. Please sign in instead.' });
+      return res.status(400).json({ message: 'Email address already registered. Please sign in instead.' });
     }
     if (!isSignup && !existingUser) {
-      return res.status(400).json({ message: 'Phone number is not registered under any pharmacy store.' });
+      return res.status(400).json({ message: 'Email address is not registered under any pharmacy store.' });
     }
 
     // Generate simulated/real 6-digit OTP code
     const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
-    const expires = Date.now() + 2 * 60 * 1000; // 2 minutes expiry
+    const expires = Date.now() + 5 * 60 * 1000; // 5 minutes expiry for email
 
-    const phoneKey = normalizePhoneKey(phoneNumber);
-    activeOTPs.set(phoneKey, { code: otpCode, expires });
-    console.log(`[OTP Simulation] Generated verification code ${otpCode} for ${phoneNumber} (Key: ${phoneKey})`);
+    activeOTPs.set(emailKey, { code: otpCode, expires });
+    console.log(`[OTP Simulation] Generated verification code ${otpCode} for ${email} (Key: ${emailKey})`);
 
-    // Choose active SMS provider and send SMS automatically
-    let realSMSSent = false;
-    let providerName = '';
-    let smsErrorMessage = '';
-    const textMessage = `Your RxSmart Pharmacy Shop verification code is ${otpCode}. Valid for 2 minutes.`;
+    let realEmailSent = false;
+    let emailErrorMessage = '';
+    const usingRealEmail = !!emailTransporter;
 
-    const hasFast2SMS = !!process.env.FAST2SMS_API_KEY;
-    const hasTwilio = !!(twilioClient && process.env.TWILIO_PHONE_NUMBER);
-    const hasVonage = !!(process.env.VONAGE_API_KEY && process.env.VONAGE_API_SECRET);
-    const hasTextBelt = !!process.env.TEXTBELT_API_KEY;
-
-    const usingRealSMS = hasFast2SMS || hasTwilio || hasVonage || hasTextBelt;
-
-    // 1. Fast2SMS Integration (India)
-    if (hasFast2SMS) {
-      providerName = 'Fast2SMS';
-      const cleanPhone = formatPhoneNumberForFast2SMS(phoneNumber);
+    if (usingRealEmail) {
       try {
-        const response = await fetch("https://www.fast2sms.com/dev/bulkV2", {
-          method: 'POST',
-          headers: {
-            'authorization': process.env.FAST2SMS_API_KEY,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            route: 'q',
-            message: textMessage,
-            language: 'english',
-            flash: 0,
-            numbers: cleanPhone
-          })
-        });
-        const data = await response.json();
-        if (data.return) {
-          realSMSSent = true;
-          console.log(`[OTP] Sent via Fast2SMS successfully to ${phoneNumber} (Fast2SMS number: ${cleanPhone})`);
-        } else {
-          smsErrorMessage = data.message || JSON.stringify(data);
-          console.error(`[OTP Error] Fast2SMS returned error:`, smsErrorMessage);
-        }
+        const mailOptions = {
+          from: `"RxSmart Security" <${process.env.EMAIL_USER}>`,
+          to: email,
+          subject: 'RxSmart Verification Code',
+          text: `Your RxSmart pharmacy store verification code is ${otpCode}. Valid for 5 minutes.`,
+          html: `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px; background-color: #ffffff; color: #333333;">
+              <div style="text-align: center; border-bottom: 2px solid #6366f1; padding-bottom: 15px;">
+                <h2 style="color: #6366f1; margin: 0;">RxSmart Pharmacy Shop</h2>
+              </div>
+              <div style="padding: 20px 0;">
+                <p>Hello,</p>
+                <p>You requested a verification code to access the RxSmart Pharmacy Management System.</p>
+                <div style="text-align: center; margin: 30px 0;">
+                  <span style="font-size: 32px; font-weight: 800; letter-spacing: 6px; padding: 10px 25px; border-radius: 6px; background-color: #f3f4f6; color: #111827; border: 1px dashed #d1d5db;">
+                    ${otpCode}
+                  </span>
+                </div>
+                <p style="color: #ef4444; font-weight: bold;">This code is valid for 5 minutes.</p>
+                <p style="font-size: 13px; color: #6b7280; margin-top: 25px;">If you did not request this verification, please ignore this email.</p>
+              </div>
+              <div style="border-top: 1px solid #e5e7eb; padding-top: 15px; text-align: center; font-size: 12px; color: #9ca3af;">
+                &copy; 2026 RxSmart Pharmacy Management System. All rights reserved.
+              </div>
+            </div>
+          `
+        };
+        await emailTransporter.sendMail(mailOptions);
+        realEmailSent = true;
+        console.log(`[OTP] Sent verification email successfully to ${email}`);
       } catch (err) {
-        smsErrorMessage = err.message;
-        console.error(`[OTP Error] Fast2SMS dispatch failed:`, err.message);
+        emailErrorMessage = err.message;
+        console.error(`[OTP Error] Email dispatch failed:`, err.message);
       }
     }
 
-    // 2. Twilio Integration
-    if (!realSMSSent && hasTwilio) {
-      providerName = 'Twilio';
-      const cleanPhone = formatPhoneNumberForTwilio(phoneNumber);
-      try {
-        await twilioClient.messages.create({
-          body: textMessage,
-          from: process.env.TWILIO_PHONE_NUMBER,
-          to: cleanPhone
-        });
-        realSMSSent = true;
-        console.log(`[OTP] Sent via Twilio successfully to ${phoneNumber} (Twilio number: ${cleanPhone})`);
-      } catch (smsError) {
-        smsErrorMessage = smsError.message;
-        console.error('[OTP Error] Twilio SMS dispatch failed:', smsError.message);
-      }
-    }
-
-    // 3. Vonage Integration
-    if (!realSMSSent && hasVonage) {
-      providerName = 'Vonage';
-      const cleanPhone = formatPhoneNumberForVonage(phoneNumber);
-      try {
-        const response = await fetch("https://rest.nexmo.com/sms/json", {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            api_key: process.env.VONAGE_API_KEY,
-            api_secret: process.env.VONAGE_API_SECRET,
-            to: cleanPhone,
-            from: process.env.VONAGE_FROM_NUMBER || 'RxSmart',
-            text: textMessage
-          })
-        });
-        const data = await response.json();
-        if (data.messages && data.messages[0] && data.messages[0].status === '0') {
-          realSMSSent = true;
-          console.log(`[OTP] Sent via Vonage successfully to ${phoneNumber} (Vonage number: ${cleanPhone})`);
-        } else {
-          smsErrorMessage = data.messages?.[0]?.['error-text'] || JSON.stringify(data);
-          console.error(`[OTP Error] Vonage returned error:`, smsErrorMessage);
-        }
-      } catch (err) {
-        smsErrorMessage = err.message;
-        console.error(`[OTP Error] Vonage dispatch failed:`, err.message);
-      }
-    }
-
-    // 4. TextBelt Integration (1 free per day)
-    if (!realSMSSent && hasTextBelt) {
-      providerName = 'TextBelt';
-      try {
-        const response = await fetch("https://textbelt.com/text", {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            phone: phoneNumber,
-            message: textMessage,
-            key: process.env.TEXTBELT_API_KEY
-          })
-        });
-        const data = await response.json();
-        if (data.success) {
-          realSMSSent = true;
-          console.log(`[OTP] Sent via TextBelt successfully to ${phoneNumber}`);
-        } else {
-          smsErrorMessage = data.error || JSON.stringify(data);
-          console.error(`[OTP Error] TextBelt returned error:`, smsErrorMessage);
-        }
-      } catch (err) {
-        smsErrorMessage = err.message;
-        console.error(`[OTP Error] TextBelt dispatch failed:`, err.message);
-      }
-    }
-
-    // If the user configured an SMS provider but sending failed, do NOT return the code to the frontend.
-    // Instead, throw an error so the user knows delivery failed.
-    if (usingRealSMS && !realSMSSent) {
+    if (usingRealEmail && !realEmailSent) {
       return res.status(500).json({
-        message: `Failed to send SMS to your phone number via ${providerName || 'SMS gateway'}. Error details: ${smsErrorMessage || 'Unknown gateway response'}. Please verify your API key, balance, or phone number.`
+        message: `Failed to send email OTP to your address. Error details: ${emailErrorMessage || 'Unknown mail server response'}. Please verify your SMTP settings in the Render Dashboard.`
       });
     }
 
     res.json({
-      message: realSMSSent 
-        ? `Verification code sent to ${phoneNumber} via ${providerName}.` 
-        : `OTP sent to ${phoneNumber} (Simulated).`,
-      isSimulated: !realSMSSent,
-      otpCode: realSMSSent ? undefined : otpCode
+      message: realEmailSent 
+        ? `Verification code sent to ${email} successfully.` 
+        : `OTP sent to ${email} (Simulated).`,
+      isSimulated: !realEmailSent,
+      otpCode: realEmailSent ? undefined : otpCode
     });
   } catch (error) {
     res.status(500).json({ message: 'Error generating OTP.', error: error.message });
@@ -382,18 +282,18 @@ export async function sendOTP(req, res) {
 
 export async function verifyOTPLogin(req, res) {
   try {
-    const { phoneNumber, otpCode } = req.body;
-    if (!phoneNumber || !otpCode) {
-      return res.status(400).json({ message: 'Phone number and OTP code are required.' });
+    const { email, otpCode } = req.body;
+    if (!email || !otpCode) {
+      return res.status(400).json({ message: 'Email and OTP code are required.' });
     }
 
-    const phoneKey = normalizePhoneKey(phoneNumber);
-    const record = activeOTPs.get(phoneKey);
+    const emailKey = normalizeEmailKey(email);
+    const record = activeOTPs.get(emailKey);
     if (!record) {
-      return res.status(400).json({ message: 'No OTP requested for this phone number.' });
+      return res.status(400).json({ message: 'No OTP requested for this email address.' });
     }
     if (Date.now() > record.expires) {
-      activeOTPs.delete(phoneKey);
+      activeOTPs.delete(emailKey);
       return res.status(400).json({ message: 'OTP has expired. Please request a new one.' });
     }
     if (record.code !== otpCode) {
@@ -401,11 +301,11 @@ export async function verifyOTPLogin(req, res) {
     }
 
     // Clear OTP after successful verification
-    activeOTPs.delete(phoneKey);
+    activeOTPs.delete(emailKey);
 
     // Fetch user
     const users = await db.users.raw();
-    const user = users.find(u => u.shopDetails?.phone && phonesMatch(u.shopDetails.phone, phoneNumber));
+    const user = users.find(u => u.email && u.email.toLowerCase() === emailKey);
 
     if (!user) {
       return res.status(404).json({ message: 'User not found.' });
@@ -431,18 +331,18 @@ export async function verifyOTPLogin(req, res) {
 
 export async function verifyOTPRegister(req, res) {
   try {
-    const { phoneNumber, otpCode, username, email, password, shopName, shopAddress, gstin } = req.body;
-    if (!phoneNumber || !otpCode || !username || !email || !password || !shopName) {
+    const { email, otpCode, username, password, shopName, shopPhone, shopAddress, gstin } = req.body;
+    if (!email || !otpCode || !username || !password || !shopName) {
       return res.status(400).json({ message: 'All registration parameters are required.' });
     }
 
-    const phoneKey = normalizePhoneKey(phoneNumber);
-    const record = activeOTPs.get(phoneKey);
+    const emailKey = normalizeEmailKey(email);
+    const record = activeOTPs.get(emailKey);
     if (!record) {
-      return res.status(400).json({ message: 'No OTP requested for this phone number.' });
+      return res.status(400).json({ message: 'No OTP requested for this email address.' });
     }
     if (Date.now() > record.expires) {
-      activeOTPs.delete(phoneKey);
+      activeOTPs.delete(emailKey);
       return res.status(400).json({ message: 'OTP has expired. Please request a new one.' });
     }
     if (record.code !== otpCode) {
@@ -450,7 +350,7 @@ export async function verifyOTPRegister(req, res) {
     }
 
     // Clear OTP
-    activeOTPs.delete(phoneKey);
+    activeOTPs.delete(emailKey);
 
     // Verify email is not registered
     const existingUser = await db.users.findOne({ email: email.toLowerCase() });
@@ -469,7 +369,7 @@ export async function verifyOTPRegister(req, res) {
       username,
       shopDetails: {
         name: shopName,
-        phone: phoneNumber,
+        phone: shopPhone || '',
         address: shopAddress || '',
         gstin: gstin || ''
       }

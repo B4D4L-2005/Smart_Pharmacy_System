@@ -32,12 +32,12 @@ export function Signup({ onNavigate }) {
 
     setLoading(true);
     try {
-      const res = await api.auth.sendOTP(shopPhone, true);
+      const res = await api.auth.sendOTP(email, true);
       setOtpSent(true);
       if (res.isSimulated) {
-        showToast(`SMS Simulator: Registration code is ${res.otpCode} (valid for 2 mins)`, 'success');
+        showToast(`Email Simulator: Registration code is ${res.otpCode} (valid for 5 mins)`, 'success');
       } else {
-        showToast(res.message || 'Verification code sent to your phone number via SMS.', 'success');
+        showToast(res.message || 'Verification code sent to your email address.', 'success');
       }
     } catch (err) {
       showToast(err.message || 'Failed to send OTP code.', 'danger');
@@ -56,16 +56,17 @@ export function Signup({ onNavigate }) {
     setLoading(true);
     try {
       await signupWithOTP({
-        phoneNumber: shopPhone,
+        email,
         otpCode,
         username,
-        email,
         password,
         shopName,
+        shopPhone,
+        phoneNumber: shopPhone, // kept for backup compatibility
         shopAddress,
         gstin
       });
-      showToast('Phone number verified. Pharmacy profile created successfully!', 'success');
+      showToast('Email verified. Pharmacy profile created successfully!', 'success');
       onNavigate('dashboard');
     } catch (err) {
       showToast(err.message || 'Verification failed. Invalid OTP code.', 'danger');
@@ -285,7 +286,7 @@ export function Signup({ onNavigate }) {
 
 
               <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '4px' }}>
-                <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Simulated SMS verification code sent</span>
+                <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Simulated Email verification code sent</span>
                 <button
                   type="button"
                   onClick={() => setOtpSent(false)}

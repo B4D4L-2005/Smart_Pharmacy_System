@@ -73,17 +73,17 @@ export const api = {
       return data;
     },
 
-    async sendOTP(phoneNumber, isSignup) {
+    async sendOTP(email, isSignup) {
       return await request('/auth/send-otp', {
         method: 'POST',
-        body: JSON.stringify({ phoneNumber, isSignup })
+        body: JSON.stringify({ email, isSignup })
       });
     },
 
-    async verifyOTPLogin(phoneNumber, otpCode) {
+    async verifyOTPLogin(email, otpCode) {
       const data = await request('/auth/verify-otp-login', {
         method: 'POST',
-        body: JSON.stringify({ phoneNumber, otpCode })
+        body: JSON.stringify({ email, otpCode })
       });
       if (data.token) {
         localStorage.setItem('pharmacy_token', data.token);

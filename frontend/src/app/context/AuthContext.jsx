@@ -53,10 +53,10 @@ export function AuthProvider({ children }) {
     }
   };
 
-  const loginWithOTP = async (phoneNumber, otpCode) => {
+  const loginWithOTP = async (email, otpCode) => {
     setLoading(true);
     try {
-      const data = await api.auth.verifyOTPLogin(phoneNumber, otpCode);
+      const data = await api.auth.verifyOTPLogin(email, otpCode);
       setUser(data.user);
       return data;
     } catch (error) {
@@ -74,7 +74,7 @@ export function AuthProvider({ children }) {
       setUser(data.user);
 
       // Backup registered user credentials locally for auto-restoration upon Render instance spin-downs
-      localStorage.setItem(`rxsmart_user_backup_${signUpData.phoneNumber}`, JSON.stringify(signUpData));
+      localStorage.setItem(`rxsmart_user_backup_${signUpData.email.toLowerCase()}`, JSON.stringify(signUpData));
 
       return data;
     } catch (error) {

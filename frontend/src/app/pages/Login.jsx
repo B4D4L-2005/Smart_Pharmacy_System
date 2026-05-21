@@ -2,14 +2,14 @@ import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useNotification } from '../context/NotificationContext.jsx';
 import { api } from '../lib/api.js';
-import { Plus, Phone, MessageSquare } from 'lucide-react';
+import { Plus, Mail, MessageSquare } from 'lucide-react';
 
 export function Login({ onNavigate }) {
   const { loginWithOTP } = useAuth();
   const { showToast } = useNotification();
   
   // OTP States
-  const [phone, setPhone] = useState('');
+  const [email, setEmail] = useState('');
   const [otpCode, setOtpCode] = useState('');
   const [otpSent, setOtpSent] = useState(false);
   const [whatsappLink, setWhatsappLink] = useState('');
@@ -18,8 +18,8 @@ export function Login({ onNavigate }) {
 
   const handleSendOTP = async (e) => {
     e.preventDefault();
-    if (!phone) {
-      showToast('Please enter your phone number.', 'warning');
+    if (!email) {
+      showToast('Please enter your email address.', 'warning');
       return;
     }
 
@@ -27,11 +27,11 @@ export function Login({ onNavigate }) {
     try {
       let res;
       try {
-        res = await api.auth.sendOTP(phone, false);
+        res = await api.auth.sendOTP(email, false);
       } catch (err) {
         // If the backend has reset and the user is not found, restore the user silently using local backups
-        if (err.message && (err.message.toLowerCase().includes('not registered') || err.message.toLowerCase().includes('not found'))) {
-          const backupDataStr = localStorage.getItem(`rxsmart_user_backup_${phone}`);
+        if (err.message && (err.message.toLowerCase().includes('not registered') || err.message.toLowerCase().includes('not found') || err.message.toLowerCase().includes('not registered under any pharmacy store'))) {
+          const backupDataStr = localStorage.getItem(`rxsmart_user_backup_${email.toLowerCase()}`);
           if (backupDataStr) {
             console.log('[Auth] Render database reset detected. Restoring user store profile...');
             const backupData = JSON.parse(backupDataStr);
@@ -40,12 +40,12 @@ export function Login({ onNavigate }) {
               password: backupData.password,
               username: backupData.username,
               shopName: backupData.shopName,
-              shopPhone: backupData.phoneNumber,
+              shopPhone: backupData.phoneNumber || backupData.shopPhone,
               shopAddress: backupData.shopAddress,
               gstin: backupData.gstin
             });
             // Retry sending OTP after restoration
-            res = await api.auth.sendOTP(phone, false);
+            res = await api.auth.sendOTP(email, false);
           } else {
             throw err;
           }
@@ -55,9 +55,9 @@ export function Login({ onNavigate }) {
       }
       setOtpSent(true);
       if (res.isSimulated) {
-        showToast(`SMS Simulator: Verification code is ${res.otpCode} (valid for 2 mins)`, 'success');
+        showToast(`Email Simulator: Verification code is ${res.otpCode} (valid for 5 mins)`, 'success');
       } else {
-        showToast(res.message || 'OTP code sent to your phone number via SMS.', 'success');
+        showToast(res.message || 'OTP code sent to your email address.', 'success');
       }
     } catch (err) {
       showToast(err.message || 'Failed to send OTP code.', 'danger');
@@ -68,15 +68,15 @@ export function Login({ onNavigate }) {
 
   const handleVerifyOTP = async (e) => {
     e.preventDefault();
-    if (!phone || !otpCode) {
+    if (!email || !otpCode) {
       showToast('Please enter the OTP verification code.', 'warning');
       return;
     }
 
     setLoading(true);
     try {
-      await loginWithOTP(phone, otpCode);
-      showToast('Phone number verified. Welcome back!', 'success');
+      await loginWithOTP(email, otpCode);
+      showToast('Email verified. Welcome back!', 'success');
       onNavigate('dashboard');
     } catch (err) {
       showToast(err.message || 'Verification failed. Invalid OTP code.', 'danger');
@@ -116,16 +116,16 @@ export function Login({ onNavigate }) {
             <Plus size={28} strokeWidth={2.5} />
           </div>
           <h2 style={{ fontSize: '24px', fontWeight: '800', marginBottom: '6px' }}>Store Sign In</h2>
-          <p style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Log in via OTP sent to your registered phone number</p>
+          <p style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Log in via OTP sent to your registered email address</p>
         </div>
 
         {/* OTP Login Form */}
         <form onSubmit={otpSent ? handleVerifyOTP : handleSendOTP} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          {/* Phone Number */}
+          {/* Email Address */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-            <label style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-secondary)' }}>REGISTERED PHONE NUMBER</label>
+            <label style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-secondary)' }}>REGISTERED EMAIL ADDRESS</label>
             <div style={{ position: 'relative' }}>
-              <Phone 
+              <Mail 
                 size={16} 
                 style={{ 
                   position: 'absolute', 
@@ -136,10 +136,10 @@ export function Login({ onNavigate }) {
                 }} 
               />
               <input
-                type="tel"
-                placeholder="+91 98765 43210"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
+                type="email"
+                placeholder="owner@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 disabled={otpSent}
                 className="glass-input"
                 style={{ paddingLeft: '42px' }}
@@ -174,16 +174,14 @@ export function Login({ onNavigate }) {
                 />
               </div>
 
-
-
               <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '4px' }}>
-                <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Simulated SMS OTP</span>
+                <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Simulated Email OTP</span>
                 <button
                   type="button"
                   onClick={() => setOtpSent(false)}
                   style={{ background: 'none', border: 'none', color: 'var(--primary)', fontSize: '11px', fontWeight: '700', cursor: 'pointer' }}
                 >
-                  Change Phone Number
+                  Change Email Address
                 </button>
               </div>
             </div>
