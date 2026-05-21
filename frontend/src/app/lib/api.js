@@ -25,10 +25,20 @@ async function request(endpoint, options = {}) {
 
   try {
     const response = await fetch(url, config);
-    const data = await response.json();
+    
+    const contentType = response.headers.get('content-type');
+    let data;
+    if (contentType && contentType.includes('application/json')) {
+      data = await response.json();
+    } else {
+      const text = await response.text();
+      data = { message: text || `HTTP Error ${response.status}: ${response.statusText}` };
+    }
     
     if (!response.ok) {
-      throw new Error(data.message || 'Something went wrong');
+      const errMsg = data.message || `Request failed with status ${response.status}`;
+      const detailMsg = data.error ? ` (${data.error})` : '';
+      throw new Error(`${errMsg}${detailMsg}`);
     }
     
     return data;

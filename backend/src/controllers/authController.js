@@ -145,16 +145,74 @@ const initTwilio = async () => {
   if (TWILIO_SID && TWILIO_AUTH_TOKEN) {
     try {
       const twilioModule = await import('twilio');
-      twilioClient = twilioModule.default(TWILIO_SID, TWILIO_AUTH_TOKEN);
+      const twilioInit = twilioModule.default || twilioModule;
+      twilioClient = typeof twilioInit === 'function' ? twilioInit(TWILIO_SID, TWILIO_AUTH_TOKEN) : twilioInit;
       console.log('[OTP] Twilio SDK loaded and client initialized successfully.');
     } catch (err) {
-      console.warn('[OTP WARNING] Twilio SDK failed to load dynamically:', err.message);
+      console.warn('[OTP WARNING] Twilio SDK failed to load dynamically:', err.message, err.stack);
     }
   }
 };
 initTwilio();
 
-const activeOTPs = new Map(); // phone -> { code, expires }
+// Helper to compare last 10 digits of phone numbers to avoid variations in formatting
+function phonesMatch(phone1, phone2) {
+  if (!phone1 || !phone2) return false;
+  const p1 = phone1.replace(/[^0-9]/g, '');
+  const p2 = phone2.replace(/[^0-9]/g, '');
+  if (p1.length >= 10 && p2.length >= 10) {
+    return p1.slice(-10) === p2.slice(-10);
+  }
+  return p1 === p2;
+}
+
+// Helper to normalize phone number keys for activeOTPs map
+function normalizePhoneKey(phone) {
+  if (!phone) return '';
+  const digits = phone.replace(/[^0-9]/g, '');
+  if (digits.length >= 10) {
+    return digits.slice(-10);
+  }
+  return digits;
+}
+
+// Normalize phone for Fast2SMS (expects exactly 10 digits without +91 or 91)
+function formatPhoneNumberForFast2SMS(phone) {
+  const clean = phone.replace(/[^0-9]/g, '');
+  if (clean.length >= 10) {
+    return clean.slice(-10);
+  }
+  return clean;
+}
+
+// Normalize phone for Twilio (expects E.164, e.g. +91XXXXXXXXXX)
+function formatPhoneNumberForTwilio(phone) {
+  let clean = phone.trim();
+  if (!clean.startsWith('+')) {
+    const digitsOnly = clean.replace(/[^0-9]/g, '');
+    if (digitsOnly.length === 10) {
+      clean = '+91' + digitsOnly;
+    } else if (digitsOnly.length === 12 && digitsOnly.startsWith('91')) {
+      clean = '+' + digitsOnly;
+    } else {
+      clean = '+' + digitsOnly;
+    }
+  } else {
+    clean = '+' + clean.replace(/[^0-9]/g, '');
+  }
+  return clean;
+}
+
+// Normalize phone for Vonage (expects digits only with country code, e.g. 91XXXXXXXXXX)
+function formatPhoneNumberForVonage(phone) {
+  const digitsOnly = phone.replace(/[^0-9]/g, '');
+  if (digitsOnly.length === 10) {
+    return '91' + digitsOnly;
+  }
+  return digitsOnly;
+}
+
+const activeOTPs = new Map(); // phoneLast10Digits -> { code, expires }
 
 export async function sendOTP(req, res) {
   try {
@@ -164,7 +222,7 @@ export async function sendOTP(req, res) {
     }
 
     const users = await db.users.raw();
-    const existingUser = users.find(u => u.shopDetails?.phone === phoneNumber);
+    const existingUser = users.find(u => u.shopDetails?.phone && phonesMatch(u.shopDetails.phone, phoneNumber));
 
     if (isSignup && existingUser) {
       return res.status(400).json({ message: 'Phone number already registered. Please sign in instead.' });
@@ -173,21 +231,31 @@ export async function sendOTP(req, res) {
       return res.status(400).json({ message: 'Phone number is not registered under any pharmacy store.' });
     }
 
-    // Generate simulated 6-digit OTP code
+    // Generate simulated/real 6-digit OTP code
     const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
     const expires = Date.now() + 2 * 60 * 1000; // 2 minutes expiry
 
-    activeOTPs.set(phoneNumber, { code: otpCode, expires });
-    console.log(`[OTP Simulation] Sent verification code ${otpCode} to ${phoneNumber}`);
+    const phoneKey = normalizePhoneKey(phoneNumber);
+    activeOTPs.set(phoneKey, { code: otpCode, expires });
+    console.log(`[OTP Simulation] Generated verification code ${otpCode} for ${phoneNumber} (Key: ${phoneKey})`);
 
     // Choose active SMS provider and send SMS automatically
     let realSMSSent = false;
     let providerName = '';
+    let smsErrorMessage = '';
     const textMessage = `Your RxSmart Pharmacy Shop verification code is ${otpCode}. Valid for 2 minutes.`;
 
+    const hasFast2SMS = !!process.env.FAST2SMS_API_KEY;
+    const hasTwilio = !!(twilioClient && process.env.TWILIO_PHONE_NUMBER);
+    const hasVonage = !!(process.env.VONAGE_API_KEY && process.env.VONAGE_API_SECRET);
+    const hasTextBelt = !!process.env.TEXTBELT_API_KEY;
+
+    const usingRealSMS = hasFast2SMS || hasTwilio || hasVonage || hasTextBelt;
+
     // 1. Fast2SMS Integration (India)
-    if (process.env.FAST2SMS_API_KEY) {
+    if (hasFast2SMS) {
       providerName = 'Fast2SMS';
+      const cleanPhone = formatPhoneNumberForFast2SMS(phoneNumber);
       try {
         const response = await fetch("https://www.fast2sms.com/dev/bulkV2", {
           method: 'POST',
@@ -200,40 +268,45 @@ export async function sendOTP(req, res) {
             message: textMessage,
             language: 'english',
             flash: 0,
-            numbers: phoneNumber.replace(/[^0-9]/g, '')
+            numbers: cleanPhone
           })
         });
         const data = await response.json();
         if (data.return) {
           realSMSSent = true;
-          console.log(`[OTP] Sent via Fast2SMS successfully to ${phoneNumber}`);
+          console.log(`[OTP] Sent via Fast2SMS successfully to ${phoneNumber} (Fast2SMS number: ${cleanPhone})`);
         } else {
-          console.error(`[OTP Error] Fast2SMS returned error:`, data.message || data);
+          smsErrorMessage = data.message || JSON.stringify(data);
+          console.error(`[OTP Error] Fast2SMS returned error:`, smsErrorMessage);
         }
       } catch (err) {
+        smsErrorMessage = err.message;
         console.error(`[OTP Error] Fast2SMS dispatch failed:`, err.message);
       }
     }
 
     // 2. Twilio Integration
-    if (!realSMSSent && twilioClient && process.env.TWILIO_PHONE_NUMBER) {
+    if (!realSMSSent && hasTwilio) {
       providerName = 'Twilio';
+      const cleanPhone = formatPhoneNumberForTwilio(phoneNumber);
       try {
         await twilioClient.messages.create({
           body: textMessage,
           from: process.env.TWILIO_PHONE_NUMBER,
-          to: phoneNumber
+          to: cleanPhone
         });
         realSMSSent = true;
-        console.log(`[OTP] Sent via Twilio successfully to ${phoneNumber}`);
+        console.log(`[OTP] Sent via Twilio successfully to ${phoneNumber} (Twilio number: ${cleanPhone})`);
       } catch (smsError) {
+        smsErrorMessage = smsError.message;
         console.error('[OTP Error] Twilio SMS dispatch failed:', smsError.message);
       }
     }
 
     // 3. Vonage Integration
-    if (!realSMSSent && process.env.VONAGE_API_KEY && process.env.VONAGE_API_SECRET) {
+    if (!realSMSSent && hasVonage) {
       providerName = 'Vonage';
+      const cleanPhone = formatPhoneNumberForVonage(phoneNumber);
       try {
         const response = await fetch("https://rest.nexmo.com/sms/json", {
           method: 'POST',
@@ -241,7 +314,7 @@ export async function sendOTP(req, res) {
           body: JSON.stringify({
             api_key: process.env.VONAGE_API_KEY,
             api_secret: process.env.VONAGE_API_SECRET,
-            to: phoneNumber.replace(/[^0-9]/g, ''),
+            to: cleanPhone,
             from: process.env.VONAGE_FROM_NUMBER || 'RxSmart',
             text: textMessage
           })
@@ -249,17 +322,19 @@ export async function sendOTP(req, res) {
         const data = await response.json();
         if (data.messages && data.messages[0] && data.messages[0].status === '0') {
           realSMSSent = true;
-          console.log(`[OTP] Sent via Vonage successfully to ${phoneNumber}`);
+          console.log(`[OTP] Sent via Vonage successfully to ${phoneNumber} (Vonage number: ${cleanPhone})`);
         } else {
-          console.error(`[OTP Error] Vonage returned error:`, data.messages?.[0]?.['error-text'] || data);
+          smsErrorMessage = data.messages?.[0]?.['error-text'] || JSON.stringify(data);
+          console.error(`[OTP Error] Vonage returned error:`, smsErrorMessage);
         }
       } catch (err) {
+        smsErrorMessage = err.message;
         console.error(`[OTP Error] Vonage dispatch failed:`, err.message);
       }
     }
 
     // 4. TextBelt Integration (1 free per day)
-    if (!realSMSSent && process.env.TEXTBELT_API_KEY) {
+    if (!realSMSSent && hasTextBelt) {
       providerName = 'TextBelt';
       try {
         const response = await fetch("https://textbelt.com/text", {
@@ -276,11 +351,21 @@ export async function sendOTP(req, res) {
           realSMSSent = true;
           console.log(`[OTP] Sent via TextBelt successfully to ${phoneNumber}`);
         } else {
-          console.error(`[OTP Error] TextBelt returned error:`, data.error || data);
+          smsErrorMessage = data.error || JSON.stringify(data);
+          console.error(`[OTP Error] TextBelt returned error:`, smsErrorMessage);
         }
       } catch (err) {
+        smsErrorMessage = err.message;
         console.error(`[OTP Error] TextBelt dispatch failed:`, err.message);
       }
+    }
+
+    // If the user configured an SMS provider but sending failed, do NOT return the code to the frontend.
+    // Instead, throw an error so the user knows delivery failed.
+    if (usingRealSMS && !realSMSSent) {
+      return res.status(500).json({
+        message: `Failed to send SMS to your phone number via ${providerName || 'SMS gateway'}. Error details: ${smsErrorMessage || 'Unknown gateway response'}. Please verify your API key, balance, or phone number.`
+      });
     }
 
     res.json({
@@ -302,12 +387,13 @@ export async function verifyOTPLogin(req, res) {
       return res.status(400).json({ message: 'Phone number and OTP code are required.' });
     }
 
-    const record = activeOTPs.get(phoneNumber);
+    const phoneKey = normalizePhoneKey(phoneNumber);
+    const record = activeOTPs.get(phoneKey);
     if (!record) {
       return res.status(400).json({ message: 'No OTP requested for this phone number.' });
     }
     if (Date.now() > record.expires) {
-      activeOTPs.delete(phoneNumber);
+      activeOTPs.delete(phoneKey);
       return res.status(400).json({ message: 'OTP has expired. Please request a new one.' });
     }
     if (record.code !== otpCode) {
@@ -315,11 +401,11 @@ export async function verifyOTPLogin(req, res) {
     }
 
     // Clear OTP after successful verification
-    activeOTPs.delete(phoneNumber);
+    activeOTPs.delete(phoneKey);
 
     // Fetch user
     const users = await db.users.raw();
-    const user = users.find(u => u.shopDetails?.phone === phoneNumber);
+    const user = users.find(u => u.shopDetails?.phone && phonesMatch(u.shopDetails.phone, phoneNumber));
 
     if (!user) {
       return res.status(404).json({ message: 'User not found.' });
@@ -350,12 +436,13 @@ export async function verifyOTPRegister(req, res) {
       return res.status(400).json({ message: 'All registration parameters are required.' });
     }
 
-    const record = activeOTPs.get(phoneNumber);
+    const phoneKey = normalizePhoneKey(phoneNumber);
+    const record = activeOTPs.get(phoneKey);
     if (!record) {
       return res.status(400).json({ message: 'No OTP requested for this phone number.' });
     }
     if (Date.now() > record.expires) {
-      activeOTPs.delete(phoneNumber);
+      activeOTPs.delete(phoneKey);
       return res.status(400).json({ message: 'OTP has expired. Please request a new one.' });
     }
     if (record.code !== otpCode) {
@@ -363,7 +450,7 @@ export async function verifyOTPRegister(req, res) {
     }
 
     // Clear OTP
-    activeOTPs.delete(phoneNumber);
+    activeOTPs.delete(phoneKey);
 
     // Verify email is not registered
     const existingUser = await db.users.findOne({ email: email.toLowerCase() });
@@ -415,7 +502,7 @@ export async function restoreUser(req, res) {
 
     // Check if user already exists in db
     const users = await db.users.raw();
-    const existingUser = users.find(u => u.shopDetails?.phone === shopPhone || u.email === email.toLowerCase());
+    const existingUser = users.find(u => (u.shopDetails?.phone && phonesMatch(u.shopDetails.phone, shopPhone)) || u.email === email.toLowerCase());
     if (existingUser) {
       return res.status(200).json({ message: 'User already exists, no restoration needed.', user: existingUser });
     }

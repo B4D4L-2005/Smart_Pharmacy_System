@@ -30,6 +30,7 @@ export function Signup({ onNavigate }) {
       return;
     }
 
+    setLoading(true);
     try {
       const res = await api.auth.sendOTP(shopPhone, true);
       setOtpSent(true);
