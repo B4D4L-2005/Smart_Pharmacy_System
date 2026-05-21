@@ -33,7 +33,11 @@ export function Signup({ onNavigate }) {
     try {
       const res = await api.auth.sendOTP(shopPhone, true);
       setOtpSent(true);
-      showToast(`SMS Simulator: Registration code is ${res.otpCode} (valid for 2 mins)`, 'success');
+      if (res.isSimulated) {
+        showToast(`SMS Simulator: Registration code is ${res.otpCode} (valid for 2 mins)`, 'success');
+      } else {
+        showToast(res.message || 'Verification code sent to your phone number via SMS.', 'success');
+      }
     } catch (err) {
       showToast(err.message || 'Failed to send OTP code.', 'danger');
     } finally {

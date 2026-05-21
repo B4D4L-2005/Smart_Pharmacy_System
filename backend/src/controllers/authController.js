@@ -285,9 +285,10 @@ export async function sendOTP(req, res) {
 
     res.json({
       message: realSMSSent 
-        ? `OTP sent successfully to ${phoneNumber} via ${providerName}.` 
-        : `OTP sent successfully to ${phoneNumber} (Simulated).`,
-      otpCode // Returning the code to the frontend for ease-of-use/testing in demo
+        ? `Verification code sent to ${phoneNumber} via ${providerName}.` 
+        : `OTP sent to ${phoneNumber} (Simulated).`,
+      isSimulated: !realSMSSent,
+      otpCode: realSMSSent ? undefined : otpCode
     });
   } catch (error) {
     res.status(500).json({ message: 'Error generating OTP.', error: error.message });
