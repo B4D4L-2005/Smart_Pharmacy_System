@@ -12,11 +12,9 @@ export function Signup({ onNavigate }) {
   // Form Fields
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
   const [shopName, setShopName] = useState('');
   const [shopPhone, setShopPhone] = useState('');
   const [shopAddress, setShopAddress] = useState('');
-  const [gstin, setGstin] = useState('');
 
   // OTP States
   const [otpSent, setOtpSent] = useState(false);
@@ -25,7 +23,7 @@ export function Signup({ onNavigate }) {
  
   const handleSendOTP = async (e) => {
     e.preventDefault();
-    if (!username || !email || !password || !shopName || !shopPhone) {
+    if (!username || !email || !shopName || !shopPhone) {
       showToast('Please fill out all required fields (*).', 'warning');
       return;
     }
@@ -59,12 +57,12 @@ export function Signup({ onNavigate }) {
         email,
         otpCode,
         username,
-        password,
+        password: '', // Password is not required for OTP registration
         shopName,
         shopPhone,
         phoneNumber: shopPhone, // kept for backup compatibility
         shopAddress,
-        gstin
+        gstin: '' // GSTIN can be configured later in settings
       });
       showToast('Email verified. Pharmacy profile created successfully!', 'success');
       onNavigate('dashboard');
@@ -155,24 +153,6 @@ export function Signup({ onNavigate }) {
                 </div>
               </div>
             </div>
-
-            {/* Password */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '12px' }}>
-              <label style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-secondary)' }}>PASSWORD *</label>
-              <div style={{ position: 'relative' }}>
-                <KeyRound size={14} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-                <input
-                  type="password"
-                  placeholder="Min 6 characters"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  disabled={otpSent}
-                  className="glass-input"
-                  style={{ paddingLeft: '36px', height: '40px', paddingTop: 0, paddingBottom: 0 }}
-                  required
-                />
-              </div>
-            </div>
           </div>
 
           {/* Section: Shop Details */}
@@ -219,39 +199,20 @@ export function Signup({ onNavigate }) {
               </div>
             </div>
 
-            <div className="form-grid-2col" style={{ marginTop: '12px' }}>
-              {/* Shop Address */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <label style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-secondary)' }}>SHOP ADDRESS</label>
-                <div style={{ position: 'relative' }}>
-                  <MapPin size={14} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-                  <input
-                    type="text"
-                    placeholder="MG Road, Bengaluru"
-                    value={shopAddress}
-                    onChange={(e) => setShopAddress(e.target.value)}
-                    disabled={otpSent}
-                    className="glass-input"
-                    style={{ paddingLeft: '36px', height: '40px', paddingTop: 0, paddingBottom: 0 }}
-                  />
-                </div>
-              </div>
-
-              {/* GSTIN */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <label style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-secondary)' }}>STORE GSTIN</label>
-                <div style={{ position: 'relative' }}>
-                  <Percent size={14} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-                  <input
-                    type="text"
-                    placeholder="29AAAAA1111A1Z1"
-                    value={gstin}
-                    onChange={(e) => setGstin(e.target.value.toUpperCase())}
-                    disabled={otpSent}
-                    className="glass-input"
-                    style={{ paddingLeft: '36px', height: '40px', paddingTop: 0, paddingBottom: 0 }}
-                  />
-                </div>
+            {/* Shop Address */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '12px' }}>
+              <label style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-secondary)' }}>SHOP ADDRESS</label>
+              <div style={{ position: 'relative' }}>
+                <MapPin size={14} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+                <input
+                  type="text"
+                  placeholder="MG Road, Bengaluru"
+                  value={shopAddress}
+                  onChange={(e) => setShopAddress(e.target.value)}
+                  disabled={otpSent}
+                  className="glass-input"
+                  style={{ paddingLeft: '36px', height: '40px', paddingTop: 0, paddingBottom: 0 }}
+                />
               </div>
             </div>
           </div>

@@ -370,8 +370,8 @@ export async function verifyOTPLogin(req, res) {
 export async function verifyOTPRegister(req, res) {
   try {
     const { email, otpCode, username, password, shopName, shopPhone, shopAddress, gstin } = req.body;
-    if (!email || !otpCode || !username || !password || !shopName) {
-      return res.status(400).json({ message: 'All registration parameters are required.' });
+    if (!email || !otpCode || !username || !shopName) {
+      return res.status(400).json({ message: 'Email, OTP code, username, and shop name are required.' });
     }
 
     const emailKey = normalizeEmailKey(email);
@@ -398,7 +398,7 @@ export async function verifyOTPRegister(req, res) {
 
     // Hash the password
     const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, salt);
+    const hashedPassword = await bcrypt.hash(password || 'otp-secured-account-default', salt);
 
     // Create user
     const newUser = await db.users.insert({
