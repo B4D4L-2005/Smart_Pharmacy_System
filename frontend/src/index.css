@@ -589,3 +589,100 @@ h1, h2, h3, h4, h5, h6 {
   }
 }
 
+/* =========================================================================
+   RESPONSIVE LAYOUT UTILITIES
+   ========================================================================= */
+
+/* Form grid helpers */
+.form-grid-2col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.form-grid-3col {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 12px;
+}
+
+/* POS Billing layout grid */
+.billing-grid-container {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 24px;
+  align-items: start;
+}
+
+/* Auth Pages Containers */
+.auth-outer-container {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  position: relative;
+  overflow: hidden;
+}
+
+.auth-card {
+  width: 100%;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* Large Screens & Tablets Breakpoint */
+@media (max-width: 900px) {
+  .billing-grid-container {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  
+  /* Make main workspace content fit mobile margins */
+  main > div {
+    padding: 16px !important;
+  }
+}
+
+/* Phone Screen Breakpoints */
+@media (max-width: 600px) {
+  .form-grid-2col, 
+  .form-grid-3col {
+    grid-template-columns: 1fr !important;
+    gap: 12px;
+  }
+
+  header {
+    margin: 12px 12px 0 12px !important;
+    padding: 8px 16px !important;
+    min-height: 60px !important;
+  }
+
+  header h1 {
+    font-size: 16px !important;
+  }
+
+  /* Make user info subtext wrap nicely */
+  header span {
+    font-size: 9px !important;
+  }
+
+  /* Reduce panel padding for small screens */
+  .glass-panel {
+    padding: 16px !important;
+    border-radius: 12px !important;
+  }
+
+  .auth-outer-container {
+    padding: 16px 12px;
+  }
+
+  .auth-card {
+    padding: 24px 16px !important;
+    gap: 16px !important;
+  }
+}
+
+

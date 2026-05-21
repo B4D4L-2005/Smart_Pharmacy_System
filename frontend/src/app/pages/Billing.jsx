@@ -169,12 +169,7 @@ export function Billing({ onInvoiceProcessed }) {
   return (
     <div className="animate-fade-in" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
       
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: '1.2fr 1fr',
-        gap: '24px',
-        alignItems: 'start'
-      }}>
+      <div className="billing-grid-container">
         
         {/* Left Side: POS Cart & Checkout info */}
         <div className="glass-panel" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
@@ -246,7 +241,7 @@ export function Billing({ onInvoiceProcessed }) {
           {/* Customer details input */}
           <div style={{ borderTop: '1px solid var(--border-glass)', paddingTop: '16px' }}>
             <h4 style={{ fontSize: '13px', fontWeight: '700', marginBottom: '12px', color: 'var(--text-secondary)' }}>CUSTOMER DATA</h4>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+            <div className="form-grid-2col">
               <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                 <label style={{ fontSize: '10px', fontWeight: '700', color: 'var(--text-muted)' }}>CUSTOMER NAME</label>
                 <div style={{ position: 'relative' }}>

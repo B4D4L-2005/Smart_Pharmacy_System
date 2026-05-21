@@ -75,31 +75,15 @@ export function Signup({ onNavigate }) {
   };
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      padding: '40px 20px',
-      position: 'relative',
-      overflow: 'hidden'
-    }}>
+    <div className="auth-outer-container">
       {/* Decors */}
       <div className="glow-sphere glow-sphere-1" />
       <div className="glow-sphere glow-sphere-2" />
 
       {/* Signup Card */}
       <div 
-        className="glass-panel animate-slide-up"
-        style={{
-          width: '100%',
-          maxWidth: '560px',
-          padding: '40px',
-          boxSizing: 'border-box',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '24px'
-        }}
+        className="glass-panel auth-card animate-slide-up"
+        style={{ maxWidth: '560px' }}
       >
         {/* Header */}
         <div style={{ textAlign: 'center' }}>
@@ -133,7 +117,7 @@ export function Signup({ onNavigate }) {
               ACCOUNT INFO
             </h3>
             
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+            <div className="form-grid-2col">
               {/* Username */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                 <label style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-secondary)' }}>FULL NAME *</label>
@@ -196,7 +180,7 @@ export function Signup({ onNavigate }) {
               PHARMACY DETAILS
             </h3>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+            <div className="form-grid-2col">
               {/* Shop Name */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                 <label style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-secondary)' }}>PHARMACY NAME *</label>
@@ -234,7 +218,7 @@ export function Signup({ onNavigate }) {
               </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: '12px' }}>
+            <div className="form-grid-2col" style={{ marginTop: '12px' }}>
               {/* Shop Address */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                 <label style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-secondary)' }}>SHOP ADDRESS</label>

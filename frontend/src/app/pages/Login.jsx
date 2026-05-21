@@ -59,31 +59,15 @@ export function Login({ onNavigate }) {
   };
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      padding: '20px',
-      position: 'relative',
-      overflow: 'hidden'
-    }}>
+    <div className="auth-outer-container">
       {/* Decors */}
       <div className="glow-sphere glow-sphere-1" />
       <div className="glow-sphere glow-sphere-2" />
 
       {/* Login Card */}
       <div 
-        className="glass-panel animate-slide-up"
-        style={{
-          width: '100%',
-          maxWidth: '440px',
-          padding: '40px',
-          boxSizing: 'border-box',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '24px'
-        }}
+        className="glass-panel auth-card animate-slide-up"
+        style={{ maxWidth: '440px' }}
       >
         {/* Header */}
         <div style={{ textAlign: 'center' }}>

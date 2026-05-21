@@ -347,7 +347,7 @@ export function Medicines() {
             </h3>
 
             <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div className="form-grid-2col">
                 
                 {/* Name */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
@@ -377,7 +377,7 @@ export function Medicines() {
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div className="form-grid-2col">
                 {/* Category */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                   <label style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-secondary)' }}>CATEGORY *</label>
@@ -407,7 +407,7 @@ export function Medicines() {
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
+              <div className="form-grid-3col">
                 {/* Price */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                   <label style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-secondary)' }}>PRICE PER UNIT (₹) *</label>
@@ -452,7 +452,7 @@ export function Medicines() {
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div className="form-grid-2col">
                 {/* Manufacture Date */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                   <label style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-secondary)' }}>MANUFACTURE DATE</label>
