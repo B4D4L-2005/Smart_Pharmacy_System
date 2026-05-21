@@ -222,36 +222,74 @@ export async function sendOTP(req, res) {
 
     let realEmailSent = false;
     let emailErrorMessage = '';
-    const usingRealEmail = !!emailTransporter;
+    const emailApiUrl = process.env.EMAIL_API_URL;
+    const usingEmailApi = !!emailApiUrl;
+    const usingRealEmail = !!emailTransporter || usingEmailApi;
 
-    if (usingRealEmail) {
+    const emailSubject = 'RxSmart Verification Code';
+    const emailText = `Your RxSmart pharmacy store verification code is ${otpCode}. Valid for 5 minutes.`;
+    const emailHtml = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px; background-color: #ffffff; color: #333333;">
+        <div style="text-align: center; border-bottom: 2px solid #6366f1; padding-bottom: 15px;">
+          <h2 style="color: #6366f1; margin: 0;">RxSmart Pharmacy Shop</h2>
+        </div>
+        <div style="padding: 20px 0;">
+          <p>Hello,</p>
+          <p>You requested a verification code to access the RxSmart Pharmacy Management System.</p>
+          <div style="text-align: center; margin: 30px 0;">
+            <span style="font-size: 32px; font-weight: 800; letter-spacing: 6px; padding: 10px 25px; border-radius: 6px; background-color: #f3f4f6; color: #111827; border: 1px dashed #d1d5db;">
+              ${otpCode}
+            </span>
+          </div>
+          <p style="color: #ef4444; font-weight: bold;">This code is valid for 5 minutes.</p>
+          <p style="font-size: 13px; color: #6b7280; margin-top: 25px;">If you did not request this verification, please ignore this email.</p>
+        </div>
+        <div style="border-top: 1px solid #e5e7eb; padding-top: 15px; text-align: center; font-size: 12px; color: #9ca3af;">
+          &copy; 2026 RxSmart Pharmacy Management System. All rights reserved.
+        </div>
+      </div>
+    `;
+
+    if (usingEmailApi) {
+      try {
+        const response = await fetch(emailApiUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            to: email,
+            subject: emailSubject,
+            body: emailText,
+            htmlBody: emailHtml
+          })
+        });
+
+        if (response.ok) {
+          const resData = await response.json();
+          if (resData.status === 'success') {
+            realEmailSent = true;
+            console.log(`[OTP] Sent verification email via Google Apps Script API successfully to ${email}`);
+          } else {
+            emailErrorMessage = resData.message || 'Apps Script returned error status';
+            console.error(`[OTP Error] Google Apps Script email dispatch failed:`, emailErrorMessage);
+          }
+        } else {
+          emailErrorMessage = `HTTP status ${response.status}: ${response.statusText}`;
+          console.error(`[OTP Error] Google Apps Script HTTP post failed:`, emailErrorMessage);
+        }
+      } catch (err) {
+        emailErrorMessage = err.message;
+        console.error(`[OTP Error] Google Apps Script API connection failed:`, err.message);
+      }
+    } else if (emailTransporter) {
       try {
         const mailOptions = {
           from: `"RxSmart Security" <${process.env.EMAIL_USER}>`,
           to: email,
-          subject: 'RxSmart Verification Code',
-          text: `Your RxSmart pharmacy store verification code is ${otpCode}. Valid for 5 minutes.`,
-          html: `
-            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px; background-color: #ffffff; color: #333333;">
-              <div style="text-align: center; border-bottom: 2px solid #6366f1; padding-bottom: 15px;">
-                <h2 style="color: #6366f1; margin: 0;">RxSmart Pharmacy Shop</h2>
-              </div>
-              <div style="padding: 20px 0;">
-                <p>Hello,</p>
-                <p>You requested a verification code to access the RxSmart Pharmacy Management System.</p>
-                <div style="text-align: center; margin: 30px 0;">
-                  <span style="font-size: 32px; font-weight: 800; letter-spacing: 6px; padding: 10px 25px; border-radius: 6px; background-color: #f3f4f6; color: #111827; border: 1px dashed #d1d5db;">
-                    ${otpCode}
-                  </span>
-                </div>
-                <p style="color: #ef4444; font-weight: bold;">This code is valid for 5 minutes.</p>
-                <p style="font-size: 13px; color: #6b7280; margin-top: 25px;">If you did not request this verification, please ignore this email.</p>
-              </div>
-              <div style="border-top: 1px solid #e5e7eb; padding-top: 15px; text-align: center; font-size: 12px; color: #9ca3af;">
-                &copy; 2026 RxSmart Pharmacy Management System. All rights reserved.
-              </div>
-            </div>
-          `
+          subject: emailSubject,
+          text: emailText,
+          html: emailHtml
         };
         await emailTransporter.sendMail(mailOptions);
         realEmailSent = true;
@@ -264,7 +302,7 @@ export async function sendOTP(req, res) {
 
     if (usingRealEmail && !realEmailSent) {
       return res.status(500).json({
-        message: `Failed to send email OTP to your address. Error details: ${emailErrorMessage || 'Unknown mail server response'}. Please verify your SMTP settings in the Render Dashboard.`
+        message: `Failed to send email OTP to your address. Error details: ${emailErrorMessage || 'Unknown mail/API server response'}. Please verify your SMTP settings or EMAIL_API_URL in the Render Dashboard.`
       });
     }
 
