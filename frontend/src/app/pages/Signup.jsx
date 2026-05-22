@@ -13,7 +13,7 @@ export function Signup({ onNavigate }) {
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [shopName, setShopName] = useState('');
-  const [shopPhone, setShopPhone] = useState('');
+  const [shopPhone, setShopPhone] = useState('+91 ');
   const [shopAddress, setShopAddress] = useState('');
 
   const [otpSent, setOtpSent] = useState(false);

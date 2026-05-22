@@ -158,7 +158,7 @@ export async function createBill(req, res) {
               </div>
               ` : ''}
               <div style="display: flex; justify-content: space-between;">
-                <span>GST ({result.tax}%):</span>
+                <span>GST (${result.tax}%):</span>
                 <span>₹${((result.subtotal - result.discount) * (result.tax / 100)).toFixed(2)}</span>
               </div>
               <div style="display: flex; justify-content: space-between; font-size: 15px; font-weight: 800; border-top: 1px solid #cbd5e1; padding-top: 6px; margin-top: 6px; color: #0284c7;">
