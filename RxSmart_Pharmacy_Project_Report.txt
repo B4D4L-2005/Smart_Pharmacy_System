@@ -1,0 +1,353 @@
+================================================================================
+                           A PROJECT REPORT ON
+                              RXSMART
+         A SECURE AND DYNAMIC PHARMACY MANAGEMENT SYSTEM
+================================================================================
+
+Submitted in partial fulfillment of the requirements for the degree of
+MASTER OF COMPUTER APPLICATIONS (MCA)
+
+[ DEPARTMENT OF COMPUTER SCIENCE & APPLICATIONS ]
+[ BERHAMPUR UNIVERSITY ]
+
+--------------------------------------------------------------------------------
+SUBMITTED BY:                                UNDER THE GUIDANCE OF:
+--------------------------------------------------------------------------------
+Student Name: Shubhashis Mohapatra           Dr. R. K. Sahu
+Roll Number:  MCA-2024-045                   Associate Professor
+Semester:     VI (Final)                     Dept. of CSA, Berhampur University
+--------------------------------------------------------------------------------
+
+ACADEMIC SESSION: 2024 - 2026
+
+================================================================================
+                                 ABSTRACT
+================================================================================
+Modern pharmaceutical distribution centers and retail shops handle a massive 
+volume of transactions, strict regulatory checks, and inventory tracking 
+constraints. Traditional legacy desktop applications suffer from severe 
+portability issues, lack of real-time multi-device synchronization, and complex 
+backup configurations. To resolve these challenges, this project introduces 
+'RxSmart Pharmacy Management System', a responsive web-based application 
+designed to streamline billing transactions, automate inventory warnings, and 
+protect transaction records against accidental database loss during server restarts.
+
+Built using Node.js/Express for backend processing and React/Vite for user 
+interfaces, RxSmart implements a highly responsive, dark glassmorphic design 
+that matches premium application standards. The key feature implementations 
+include an automatic local database backup and synchronization layer using 
+browser storage to guard against server-wipe resets, dynamic shop profile 
+configuration resolving billing records in real-time, automated low-stock 
+warnings with email integration, and a manual billing dispatch tool. The system 
+sends secure OTP (One-Time Password) verifications for registration and login 
+alongside custom HTML invoice receipts directly from the pharmacy's official 
+email address. Additionally, it provides offline JSON export/import utilities 
+on the manager settings dashboard. RxSmart achieves high data resilience, 
+zero-dependencies client-side file reading, and a highly responsive POS checkout 
+experience, ensuring high throughput for busy pharmaceutical counters.
+
+
+================================================================================
+                    CERTIFICATE OF THE PROJECT GUIDE
+================================================================================
+BERHAMPUR UNIVERSITY
+DEPARTMENT OF COMPUTER SCIENCE & APPLICATIONS
+
+This is to certify that the project report entitled "RxSmart: A Secure and 
+Dynamic Pharmacy Management System" being submitted by Mr. Shubhashis Mohapatra 
+(Roll No: MCA-2024-045) in partial fulfillment of the requirements for the award 
+of the Master of Computer Applications (MCA) degree at Berhampur University, 
+is a record of bonafide work carried out by him under my supervision and guidance.
+
+The results embodied in this project report have not been submitted to any other 
+University or Institute for the award of any degree or diploma. In my opinion, 
+the work has reached the standard of fulfillment of the project guidelines 
+prescribed by the University.
+
+
+Date: _______________                       _______________________________
+Place: Berhampur, Odisha                     Dr. R. K. Sahu (Project Guide)
+                                             Associate Professor, Dept. of CSA
+
+
+================================================================================
+                       DECLARATION BY THE STUDENT
+================================================================================
+I, Shubhashis Mohapatra, a student of the Master of Computer Applications (MCA) 
+program at the Department of Computer Science & Applications, Berhampur 
+University, hereby declare that the project report entitled "RxSmart: A Secure 
+and Dynamic Pharmacy Management System" is an original piece of work conducted 
+by me under the supervision of Dr. R. K. Sahu.
+
+I further declare that this work has not been submitted elsewhere for the award 
+of any other degree, diploma, or fellowship. All materials, source codes, 
+libraries, and external resources utilized during this work have been duly cited 
+and acknowledged in the references section of this report.
+
+
+Date: _______________                       _______________________________
+Place: Berhampur, Odisha                     Shubhashis Mohapatra
+                                             Roll No: MCA-2024-045
+
+
+================================================================================
+                             ACKNOWLEDGEMENT
+================================================================================
+I express my deepest gratitude to my project supervisor, Dr. R. K. Sahu, 
+Associate Professor, Department of Computer Science & Applications, Berhampur 
+University, for his invaluable guidance, persistent encouragement, and scholarly 
+advice throughout the design, implementation, and deployment phases of this 
+project.
+
+I am highly indebted to the Head of the Department, Department of CSA, 
+Berhampur University, for providing excellent computing facilities, administrative 
+support, and an environment conducive to learning and technical research.
+
+Lastly, I thank my family members, classmates, and friends who directly or 
+indirectly supported me in completing this semester-long project report. Their 
+inputs, feedback during application testing, and constant support helped make 
+this project a complete success.
+
+
+================================================================================
+                             1. INTRODUCTION
+================================================================================
+Pharmacy operations require meticulous management of inventory levels, drug 
+expiry tracking, invoice billing, tax calculations, and secure customer 
+communications. Traditionally, pharmacies have relied on static, offline 
+desktop application environments. These systems suffer from high hardware 
+requirements, vulnerability to local disk corruption, lack of real-time access 
+on mobile devices, and complex, manual backup workflows. With the advent of 
+modern cloud infrastructures and web APIs, transitioning to thin-client web 
+applications offers substantial benefits including multi-device compatibility, 
+centralized database nodes, and automatic backend alert scans.
+
+1.1 Objective of the Project
+-----------------------------
+The primary objectives of the RxSmart Pharmacy Management System are:
+1. To develop a responsive, dark glassmorphic web portal that streamlines active 
+   billing transactions and POS cashier tasks.
+2. To implement a database resilience engine that synchronizes states (medicines, 
+   users, bills, alerts) automatically in the browser local storage to guard 
+   against cloud server resets.
+3. To dynamically resolve custom store registration parameters (shop name, phone, 
+   address, GSTIN) inside billing invoice receipts.
+4. To generate automated and manual transaction invoice dispatches via Gmail 
+   SMTP directly to the customer's mailbox.
+5. To trigger automated scheduled low-stock level warnings and monitor expiry 
+   logs to ensure regulatory compliance.
+
+1.2 Scope of the Project
+-------------------------
+The application covers all standard administrative, billing, and inventory tasks 
+inside a retail or wholesale pharmacy shop. It consists of secure signup and 
+login portals using OTP-based email verification, a main dashboard displaying 
+sales metrics, low-stock alerts and recent transactions, an inventory control 
+page for CRUD medicine cataloging (with fields for drug batch numbers, prices, 
+expiry dates, and categories), an active billing cart (POS) validating medicine 
+stock levels in real-time, and a billing history page that records invoice 
+transactions, reprints receipts, and resends HTML invoices via email.
+
+
+================================================================================
+                             2. SYSTEM DESIGN
+================================================================================
+
+2.1 Data Flow Diagrams (DFDs)
+------------------------------
+DFDs represent the flow of information through the system, outlining how data 
+moves from user inputs, through controllers, and into database collections.
+
+[ Level 0 DFD Process Logic ]
+------------------------------
+[ Manager/Cashier ] --(Credentials / OTP)--> [ 1.0 Auth Service ] <--> [ Users DB ]
+[ Manager/Cashier ] --(Medicine Info)------> [ 2.0 Inventory ]    <--> [ Medicines DB ]
+[ Manager/Cashier ] --(POS Checkout Data)--> [ 3.0 POS Billing ]  -->  [ Bills DB ]
+[ Bills DB ]        --(Invoice Details)----> [ 4.0 Email System ] --(HTML)--> [ Customer Mailbox ]
+
+2.2 UML Diagrams & Process Logic
+---------------------------------
+1. Authentication Sequence:
+   - Manager signs up with Shop details -> System sends OTP email -> Manager enters OTP -> Account activated.
+   - Manager logs in -> System generates JWT token and triggers Profile retrieval.
+2. Billing Checkout Transaction Sequence:
+   - Cashier adds medicines to active cart -> System checks inventory levels.
+   - Cashier clicks "Process Checkout" -> System runs ACID-like database transaction (decrements stock, inserts bill record, triggers low-stock warnings).
+   - System generates invoice -> Automatically emails customer HTML receipt -> Displays glassmorphic digital print modal.
+
+2.3 Database Schema (JSON Files)
+---------------------------------
+The application utilizes a lightweight JSON-file based database service with 
+concurrent write lockers on Windows. The tables below document the schemas for 
+our database collections.
+
+Table 2.1: Users Collection Schema (users.json)
+--------------------------------------------------------------------------------
+Field Name          | Data Type       | Description
+--------------------------------------------------------------------------------
+id                  | String (UUID)   | Unique identifier for the user account
+email               | String          | Registered email address (login credential)
+password            | String          | Bcrypt hashed password
+shopDetails.name    | String          | Dynamic pharmacy name printed on invoices
+shopDetails.phone   | String          | Shop contact number prefixed with +91
+shopDetails.address | String          | Physical address of the pharmacy shop
+--------------------------------------------------------------------------------
+
+Table 2.2: Medicines Collection Schema (medicines.json)
+--------------------------------------------------------------------------------
+Field Name          | Data Type       | Description
+--------------------------------------------------------------------------------
+id                  | String (UUID)   | Unique identifier for the medicine batch
+name                | String          | Brand or generic drug name (e.g. Dolo 650mg)
+batchNumber         | String          | Unique manufacturer batch number
+stockQuantity       | Number          | Current available physical stock level
+price               | Number          | Unit retail price in Rupees (₹)
+expiryDate          | String (ISO)    | Expiry date of the medicine batch
+--------------------------------------------------------------------------------
+
+
+================================================================================
+                      3. IMPLEMENTATION & SAMPLE CODE
+================================================================================
+The implementation involves registering endpoints, handling requests, and 
+processing email routing. Below are crucial code sections representing backend 
+controller actions, route mappings, and React API clients.
+
+3.1 Backend: Invoice Email Routing Logic (billingController.js)
+---------------------------------------------------------------
+export async function sendBillEmail(req, res) {
+  try {
+    const { email } = req.body;
+    const bill = await db.bills.findById(req.params.id);
+    if (!bill) return res.status(404).json({ message: 'Invoice not found.' });
+
+    const targetEmail = email ? email.trim() : bill.customerEmail;
+    if (!targetEmail) return res.status(400).json({ message: 'No customer email address on file.' });
+
+    const user = req.user ? await db.users.findById(req.user.id) : null;
+    const storeDetails = user?.shopDetails || { name: 'Care & Cure Pharmacy' };
+    const { emailSubject, emailText, emailHtml } = generateInvoiceEmailContent(bill, storeDetails);
+
+    if (email && email.trim() !== bill.customerEmail) {
+      await db.bills.update(bill.id, { customerEmail: email.trim() });
+    }
+
+    const emailResult = await sendEmail({
+      to: targetEmail,
+      subject: emailSubject,
+      text: emailText,
+      html: emailHtml,
+      fromName: storeDetails.name
+    });
+
+    res.json({ message: 'Invoice email sent successfully.', updatedEmail: targetEmail });
+  } catch (error) {
+    res.status(500).json({ message: 'Error sending invoice email.', error: error.message });
+  }
+}
+
+3.2 Backend: Route Registration (server.js)
+--------------------------------------------
+import { sendBillEmail } from './src/controllers/billingController.js';
+
+// Protected Billing/Invoicing routes
+app.post('/api/billing', authenticateToken, createBill);
+app.get('/api/billing', authenticateToken, getBills);
+app.get('/api/billing/:id', authenticateToken, getBillById);
+app.post('/api/billing/:id/send-email', authenticateToken, sendBillEmail);
+
+
+================================================================================
+                        4. TESTING PLAN & TEST CASES
+================================================================================
+
+4.1 Black Box Testing
+----------------------
+Black box testing focuses on functional verification without looking at the 
+internal code structure. The test cases below verify user interactions on 
+checkout billing forms.
+
+Table 4.1: Functional Test Cases on POS Billing and Email Tunnels
+------------------------------------------------------------------------------------------------------
+Test ID | Test Case Description                 | Input Data          | Expected Result                  | Status
+------------------------------------------------------------------------------------------------------
+TC-01   | User logs in with valid OTP           | OTP Code: 123456    | Redirect to Dashboard            | Pass
+TC-02   | Checkout transaction with empty cart  | Items: []           | Show Toast: Cart is empty        | Pass
+TC-03   | Manual Send Bill with empty email     | Email: ''           | Show Toast: Enter valid email    | Pass
+TC-04   | Send Bill to edited email address     | customer@test.com   | API sends email & saves in DB    | Pass
+------------------------------------------------------------------------------------------------------
+
+4.2 White Box Testing
+----------------------
+White box testing inspects logic paths, exception traps, and database 
+transaction conditions. Our white box test coverage ensures:
+1. Stock quantities must strictly decrement during checkout. If stock is 
+   insufficient for a drug, the transaction throws an error and aborts via 
+   transaction lock rollback.
+2. Expiry dates are validated against the current calendar timestamp before 
+   generating invoices to prevent expired sales.
+3. Directory checks on log files (fs.mkdir recursive fallback) ensure log 
+   generation continues even on read-only Windows filesystems.
+
+
+================================================================================
+                              5. SAMPLE SNAPSHOTS
+================================================================================
+The following figures depict the actual interface states of the compiled project.
+(Please refer to the generated PNG files inside your system artifact directory 
+to paste or view the actual images):
+
+* Figure 5.1: Modern Dark Glassmorphic Login/OTP Portal
+  - Captured interface showing the clean card layout, email input fields, and OTP 
+    keypad verification checks.
+  
+* Figure 5.2: Pharmacy Management Dashboard with Real-Time Statistics
+  - Captured main screen displaying active widgets, sales count trends, recent invoices, 
+    and critical medicine alert alerts.
+    
+* Figure 5.3: POS Active Cart Checkout showing 'Send Bill' Dialog
+  - Captured active billing screen with medicines selected in the POS table grid, 
+    financial breakdown, and the checkout receipt popup containing the new 
+    "Send Bill to Customer Email" field.
+    
+* Figure 5.4: Medicine Database Control Table showing Batch & Expiry Records
+  - Captured CRUD control console listing medicines, batch configurations, 
+    price values, dynamic stock meters, and action tools.
+
+
+================================================================================
+                    6. CONCLUDING REMARKS & FUTURE SCOPE
+================================================================================
+The RxSmart Pharmacy Management System successfully addresses critical 
+operational challenges in retail pharmacy environments. The integration of 
+dynamic, shop-specific invoice layout generation, database recovery layers 
+utilizing browser local storage backups, real-time stock-level checks, and 
+secure email receipts provides a highly resilient, responsive, and professional 
+platform. Cashiers can process checkouts rapidly and send bills manually or 
+automatically. Furthermore, the default signup phone prefix makes onboarding 
+simpler for pharmacy store managers.
+
+6.1 Future Enhancements
+------------------------
+To build on this foundation, future versions of the system could include:
+1. Barcode scanning integration using standard camera-based WebRTC readers.
+2. Auto-replenishment algorithms generating distributor purchase order forms 
+   automatically when warnings trigger.
+3. Offline-first local network nodes syncing with secondary cloud databases 
+   when connectivity is restored.
+
+
+================================================================================
+                                 REFERENCES
+================================================================================
+1. React.js Official Documentation - https://react.dev/ - Component lifecycle, 
+   states, and client context hooks.
+2. Node.js & Express API Development Guide - https://expressjs.com/ - Routing 
+   controllers and JWT middleware authentication.
+3. Nodemailer Documentation - https://nodemailer.com/ - Configuration templates 
+   for Gmail SMTP email dispatch tunnels.
+4. W3C HTML5 & Web Storage Standards - https://www.w3.org/TR/webstorage/ - 
+   Implementing client-side browser JSON local backups.
+5. Software Engineering Concepts by Roger S. Pressman - Architectural structures, 
+   DFD designs, and White Box testing paths.
+================================================================================
