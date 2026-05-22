@@ -1,0 +1,252 @@
+
+
+A
+PROJECT REPORT
+ON
+RxSmart : A Secure and Dynamic Pharmacy
+Management System
+Submitted In Partial Fulfilment Of the Requirement For the
+Degree Of
+Master of Computer Applications
+By
+Shubhashis Mohapatra
+Roll no : MCA-2024-045
+Under The Guidance
+Of
+Dr. R. K. Sahu
+Associate Professor
+Department Of Computer Science & Applications
+DEPARTMENT OF COMPUTER SCIENCE & APPLICATIONS
+BERHAMPUR UNIVERSITY , BHANJABIHAR
+2026
+
+Abstract
+Modern pharmaceutical distribution points and retail medicine portals manage heavy transactional counts, batch-specific drug expirations, flexible sales tax computations, and regulatory client notifications. Traditional offline desktop databases introduce critical operational risks, including localized file corruption, hardware rigidity, complex backup protocols, and complete data loss on host machine failures. To overcome these core limitations, this project introduces "RxSmart Pharmacy Management System", a responsive, resilient, and highly secure web-based POS platform designed for retail pharmacy counters.
+
+Engineered with a React and Vite frontend framework and a Node.js/Express backend API gateway, RxSmart runs a lightweight JSON database layer implemented with safe, concurrent write controls on Windows servers. Key technical innovations include a Client-Side local storage sync engine designed to automatically back up critical states (medicines list, transaction logs, notifications) directly inside the browser's persistent cache, shielding pharmacy databases against cloud resets or physical server wipes. The system integrates a secure SMTP invoice dispatch tunnel via Nodemailer, enabling cashiers to manually or automatically email HTML receipts to clients. It also features background inventory scanners running on set schedules to detect upcoming drug batch expiries and low stock levels. Wrapped in a stunning, modern dark/light design system powered by Vanilla HSL CSS and responsive glassmorphic cards, RxSmart delivers a reliable, high-performance checkout experience that ensures patient trust and business continuity.
+
+Declaration
+I, Shubhashis Mohapatra, hereby declare that the project report entitled "RxSmart – Secure and Dynamic Pharmacy Management System" submitted in partial fulfillment of the requirements for the degree of Master of Computer Applications, is an authentic record of my own work carried out under the professional academic supervision of Dr. R. K. Sahu, Associate Professor, Department of Computer Science & Applications, Berhampur University.
+The content embodied in this project report has not been submitted by me for the award of any other degree or diploma to any other university or institute. All the system architectures, REST controllers, client hooks, and database schemas described herein are the result of my original engineering development, supplemented by standard open-source utility libraries appropriately cited.
+
+
+Certificate
+This is to certify that the project report entitled "RxSmart – Secure and Dynamic Pharmacy Management System", submitted by Shubhashis Mohapatra, is a bona fide record of project work carried out by him at the Department of Computer Science & Applications, Berhampur University.
+This report represents a comprehensive full-stack web development implementation utilizing modern software engineering paradigms, relational JSON collections, secure authentication, and resilient local storage sync architectures. The project meets all the rigorous requirements expected for a final-year Master of Computer Applications (MCA) capstone project.
+
+
+Acknowledgement
+The successful development and completion of this full-stack project would not have been possible without the support, guidance, and active encouragement of several individuals and institutions.
+First and foremost, I would like to express my deepest gratitude to my supervisor, Dr. R. K. Sahu, Associate Professor, Department of Computer Science & Applications, Berhampur University, for providing me with the opportunity to pursue this project. His invaluable technical insights into client-server design, database security, and email dispatch tunnels were vital in shaping the architecture of RxSmart.
+I also extend my heartfelt thanks to the Head of the Department and all faculty members of the Department of CSA at Berhampur University for equipping me with the logical foundations and academic infrastructure necessary to undertake an enterprise-grade software project.
+On a personal note, I am deeply indebted to my parents and family for their unwavering belief in my potential, constant encouragement, and support. Finally, I thank my peers who contributed through collaborative feedback, testing assistance, and brainstorming sessions.
+
+Contents
+Abstract ....................................................................... i
+Declaration ................................................................... ii
+Certificate .................................................................. iii
+Acknowledgement ............................................................... iv
+1. Introduction ................................................................ 1
+   1.1 Overview of Pharmacy Management Industry ................................ 1
+   1.2 Problem Statement ....................................................... 1
+   1.3 Proposed Solution: RxSmart .............................................. 2
+   1.4 Objectives of the Project ............................................... 2
+   1.5 Scope of the Project .................................................... 3
+2. System Architecture & Tech Stack ............................................ 4
+   2.1 High-Level Architecture Framework ....................................... 4
+   2.2 Frontend Technologies ................................................... 4
+   2.3 Backend Technologies .................................................... 5
+   2.4 Database Technologies ................................................... 6
+3. Core Modules & Dashboards ................................................... 7
+   3.1 Login & Signup Portal ................................................... 7
+   3.2 Cashier / POS Billing Dashboard ......................................... 8
+   3.3 Manager / Inventory Dashboard ........................................... 9
+   3.4 Admin Reports & Notifications Center ................................... 10
+4. Advanced Feature Implementation ............................................ 11
+   4.1 Browser Local Storage Sync Engine (Resilience Engine) .................. 11
+   4.2 Nodemailer SMTP Invoice Dispatch Tunnel ................................ 12
+   4.3 Automated Low-Stock & Expiry Notification Scanners ..................... 13
+5. UI/UX Thematic Design ...................................................... 14
+   5.1 Dark & Light Mode Thematic Palette ..................................... 14
+   5.2 Responsive & Adaptive Layout Strategies ................................ 14
+6. Database Schema & API Design ............................................... 15
+   6.1 JSON Database Schema Definitions ....................................... 15
+   6.2 REST API Endpoint Specifications ....................................... 16
+7. Conclusion & Future Scope .................................................. 17
+   7.1 Project Summary ........................................................ 17
+   7.2 Future Enhancements .................................................... 17
+References .................................................................... 18
+
+1. Introduction
+1.1 Overview of Pharmacy Management Industry
+The pharmaceutical retail and distribution sector is a highly regulated, high-throughput component of global healthcare logistics. Unlike standard retail operations, pharmacies must manage unique constraints, including the storage and tracking of specific chemical formulations, batch-specific drug expirations, precise sales tax (GSTIN) logs, and strict inventory level audits to prevent critical medication stockouts. Operationally, cashiers are required to process billing rapidly at front counters, while managers must continuously cross-reference batch lists with shelf stock to identify and purge expired medicines before they are sold to patients.
+Historically, pharmacy systems relied on physical ledger books or offline, desktop-bound point-of-sale (POS) systems. These offline setups suffer from severe architectural limitations: they lock the store's data onto a single physical hard drive, lack mobile accessibility for managers working off-site, and require manual, complex database backup procedures. A minor operating system failure or physical disk corruption can wipe out years of business logs. With modern web APIs and cloud hosting, transitioning to thin-client web applications represents a major operational improvement, offering cross-device access, automated warning systems, and centralized logs with minimal local overhead.
+1.2 Problem Statement
+Despite general POS platforms becoming widely available on the web, small-to-medium retail pharmacies remain underserved by tools that adequately safeguard their operational logs against sudden data loss. Web-based SaaS platforms depend heavily on constant network availability and remote server database stability; a server crash or database wipe can instantly paralyze a busy sales counter. Additionally, manual invoice receipt archiving results in lost paper trails and delayed record updates.
+( A Store Owner Worried About Drug Expiries & Lost Receipts )
+The core challenges identified in the existing pharmacy management systems include:
+Lack of a Unified POS Flow: A fractured interface requiring separate applications for inventory entry, customer contact lookup, and sales receipt mailing.
+Local Database Vulnerability: Cloud server restarts or host database resets can clear active tables. If a server resets in a pure web-app environment, cashiers lose access to pricing catalogs and history.
+Regulatory Expiry Blindspots: Manual check of batch sheets is highly error-prone, creating legal and health risks if expired medicines are sold.
+Lack of Digital Delivery Tunnels: Offline registers fail to provide digital records, leading to patient disputes and lost invoice receipts.
+1.3 Proposed Solution: RxSmart
+RxSmart was engineered as a highly resilient, responsive full-stack pharmacy ecosystem that addresses these issues. Operating as a web application with a React client and Node.js/Express API server, RxSmart simplifies inventory tracking and front-counter billing.
+To address server reliability concerns, RxSmart integrates a Client-Side local storage sync engine (Resilience Engine). This engine automatically maintains duplicate records of current inventories, transactions, and notification boards directly inside the browser's persistent cache. If a backend database reset occurs, the pharmacy manager can immediately restore the backend files using a single click from the settings dashboard, preventing sales interruptions. The checkout module validates stock levels in real-time, generates dynamic receipts branded with the shop's customized parameters, and triggers automated invoice dispatches directly to the client's email via Nodemailer.
+(RxSmart An Ultimate Solution)
+1.4 Objectives of the Project
+The primary technical and operational objectives of the RxSmart Pharmacy Management System are:
+To develop a responsive web application utilizing a decoupled client-server architecture (React/Vite & Node.js/Express).
+To implement a local storage sync engine that caches data in browser memory to secure logs against server resets.
+To construct a secure Nodemailer SMTP tunnel for delivering HTML invoice receipts to patient inboxes at checkout.
+To design a customizable, double-themed (dark/light) user interface utilizing Vanilla HSL CSS and frosted glass panel blurs.
+To establish an automated background scanning service that continuously monitors batch expiration logs and low-stock levels.
+To support custom store registration parameters (GSTIN, name, address, contact) that dynamically bind to cashier invoice headers.
+1.5 Scope of the Project
+The project scope encompasses all critical daily processes within a retail or wholesale pharmacy shop. It provides a secure signup/login portal protected by JWT and email-delivered OTP verification. The application includes a dashboard with real-time sales metrics and expiry logs, an inventory database for managing medicine batch entries, prices, and quantities, a POS checkout module, and an invoice archive with resend capabilities.
+
+2. System Architecture & Tech Stack
+2.1 High-Level Architecture Framework
+RxSmart is structured on a modern, decoupled client-server framework. The frontend presentation layer handles the user experience, navigation routes, and local backups, communicating with the Node.js API server via asynchronous HTTP requests. The backend server manages authentication middleware, inventory updates, file writes, and the Nodemailer SMTP dispatch system. A lightweight JSON database handles persistent storage.
+2.2 Frontend Technologies
+The user portal is built on React.js and Vite to deliver high performance, responsive pages, and rapid build speeds:
+React.js (Single Page Application): Used for structured layouts, state hooks, and component encapsulation.
+Vite bundler: Ensures immediate page rendering and instant hot module replacement during development.
+Vanilla HSL CSS: Configured with custom HSL color properties, glassmorphic variables, and media query grids for responsive UI styling.
+Browser Storage APIs: Utilized to maintain backup sync stores for off-network or database recovery tasks.
+Below is the core unified frontend API client handler showing JWT token extraction and request dispatch structures:
+// C:/Users/Shubhashis/.gemini/antigravity-ide/brain/.../api.js (Excerpt)
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+
+function getHeaders() {
+  const token = localStorage.getItem('pharmacy_token');
+  const headers = { 'Content-Type': 'application/json' };
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  return headers;
+}
+
+async function request(endpoint, options = {}) {
+  const url = `${API_BASE_URL}${endpoint}`;
+  const config = { ...options, headers: { ...getHeaders(), ...options.headers } };
+  try {
+    const response = await fetch(url, config);
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.message || 'Request failed');
+    return data;
+  } catch (error) {
+    console.error(`[API Error] ${endpoint}:`, error);
+    throw error;
+  }
+}
+2.3 Backend Technologies
+The server application handles request validation, authentication checks, and email delivery:
+Node.js & Express.js: The core runtime environment and router, executing routing functions.
+BcryptJS & JSON Web Tokens (JWT): Handles password encryption, validating credentials against hashed strings.
+Nodemailer: Implements SMTP connections to secure mail servers, building and transmitting HTML invoice templates.
+2.4 Database Technologies
+To enable simple backups and deployment, RxSmart uses a file-based JSON database structure. The database collections reside in `backend/data/` as structured JSON arrays: `users.json`, `medicines.json`, `bills.json`, and `notifications.json`. To prevent file write corruptions on concurrent Windows processes, the database driver uses synchronized file locks during operations.
+
+3. Core Modules & Dashboards
+3.1 Login & Signup Portal
+The security portal restricts application access to registered users. It requires shop registration parameters (shop name, phone with country code, and physical address) on signup. It also includes an OTP delivery option via Nodemailer to verify the manager's email address during login and registration.
+
+( Figure: Login Portal )
+3.2 Cashier / POS Billing Dashboard
+The billing interface is the core transaction checkout system. Cashiers can search the medicine inventory, view stock, and add drugs to the checkout cart. The cart computes dynamic tax values (GST), apply discounts, and require an optional patient email address. Upon checking out, the database decreases stock quantities and displays a print modal with a "Send Bill to Email" dialog.
+
+( Figure: POS Active Cart Billing )
+3.3 Manager / Inventory Dashboard
+The inventory dashboard manages the medicine database. It supports CRUD operations for medicine batch profiles. Managers can catalog drugs with details including name, manufacturer batch number, price, stock level, and expiration date.
+
+( Figure: Medicine Inventory Catalog )
+3.4 Admin Reports & Notifications Center
+This analytics panel displays sales charts, total revenue logs, recent transactions, and system notifications. It flags batch expirations and low stock items, and provides utilities to trigger manual database exports/imports.
+
+( Figure: Pharmacy Management Dashboard with Real-Time Statistics )
+
+4. Advanced Feature Implementation
+4.1 Browser Local Storage Sync Engine (Resilience Engine)
+To protect pharmacy data from cloud server failures or database resets, RxSmart implements a client-side database backup engine. During active usage, the React frontend automatically stores copies of local inventories, bills, and alerts within the browser's persistent `localStorage` and `sessionStorage`. If the server database is reset, the manager can restore all tables using the setting controls, syncing local data back to the server.
+4.2 Nodemailer SMTP Invoice Dispatch Tunnel
+RxSmart replaces paper receipts with an email delivery system powered by Nodemailer and SMTP. When a cashier completes a sale, the backend generates a styled HTML invoice containing the transaction details (drugs, batch IDs, prices, discounts, GST, total) and shop parameters (name, contact, address). It then emails the invoice directly to the customer.
+Additionally, cashiers can edit or update the customer's email address on-the-fly from the receipt preview modal, which updates the address in the database and delivers the email.
+4.3 Automated Low-Stock & Expiry Notification Scanners
+To maintain inventory control, RxSmart uses background scanners to track stock health. The backend runs checking routines at startup, on manual request, and at six-hour intervals. It flags medicine batches with stock counts below 20 units or expiration dates within 30 days, logging notifications to alert the manager.
+
+( Figure: Advanced Features and Resilience )
+
+5. UI/UX Thematic Design
+5.1 Dark & Light Mode Thematic Palette
+The interface uses HSL color variables to support dynamic theme switching. The default dark mode features transparent glass panels (`backdrop-filter: blur(16px)`) and thin borders over a dark gradient background, reducing eye strain for cashiers. The system also provides a clean light mode with a soft blue background gradient.
+5.2 Responsive & Adaptive Layout Strategies
+The interface is built using CSS Grid and Flexbox to ensure clean scaling across desktop, tablet, and mobile displays. Navigation menus collapse on smaller screens, and modals support touch gestures for mobile device compatibility.
+
+6. Database Schema & API Design
+6.1 JSON Database Schema Definitions
+The tables below detail the database schema structures stored as JSON files under `backend/data/`.
+Table 6.1: Users Collection Schema (users.json)
+
+Table 6.2: Medicines Collection Schema (medicines.json)
+6.2 REST API Endpoint Specifications
+The backend API exposes the following endpoints. All protected routes require a JWT authorization token.
+Authentication Endpoints
+POST /api/auth/signup - Creates a new user, hashes password, assigns shop parameters.
+POST /api/auth/login - Verifies credentials, generates JWT access tokens.
+POST /api/auth/send-otp - Sends verification OTP to the user's email.
+POST /api/auth/restore - Rebuilds database states from browser backup payloads.
+Medicine Inventory Endpoints
+GET /api/medicines - Retrieves the list of cataloged medicines (Protected).
+POST /api/medicines - Creates a new medicine batch entry (Protected).
+PUT /api/medicines/:id - Updates details of a medicine batch (Protected).
+DELETE /api/medicines/:id - Removes a medicine batch from the database (Protected).
+POST /api/medicines/scan - Triggers an on-demand stock and expiry check (Protected).
+Billing & Invoice Endpoints
+POST /api/billing - Creates a billing record and decrements stock levels (Protected).
+GET /api/billing - Retrieves the invoice transaction archive (Protected).
+POST /api/billing/:id/send-email - Emails a transaction receipt to the customer (Protected).
+
+7. Conclusion & Future Scope
+7.1 Project Summary
+The development of the RxSmart Pharmacy Management System at the Department of Computer Science & Applications, Berhampur University, replaces legacy offline POS software with a responsive web-based alternative. By combining React/Vite interfaces with Node.js API services, the application streamlines pharmacy processes.
+The project implements a browser-based local storage sync engine to secure transaction logs against backend database resets, ensuring business continuity. The integration of Nodemailer simplifies receipt delivery, and background scanners automate stock tracking to assist pharmacy managers in maintaining catalog security and regulatory compliance.
+7.2 Future Enhancements
+To expand the platform's capabilities, future development could include:
+Barcode scanning integration using standard camera-based WebRTC readers.
+Automated purchase order generation when medicine stocks fall below warning thresholds.
+Offline-first local network nodes syncing with secondary cloud databases when connectivity is restored.
+
+References
+1. React.js Official Documentation - https://react.dev/ - Component lifecycle, states, and client context hooks.
+2. Node.js & Express API Development Guide - https://expressjs.com/ - Routing controllers and JWT middleware authentication.
+3. Nodemailer Documentation - https://nodemailer.com/ - Configuration templates for Gmail SMTP email dispatch tunnels.
+4. W3C HTML5 & Web Storage Standards - https://www.w3.org/TR/webstorage/ - Implementing client-side browser JSON local backups.
+5. Software Engineering Concepts by Roger S. Pressman - Architectural structures, DFD designs, and White Box testing paths.
+
+============================================================
+Date: | Place: Berhampur, Odisha || _______________________________ | Shubhashis Mohapatra | Roll No: MCA-2024-045
+============================================================
+
+============================================================
+Signature of Coordinator | Department Of CSA | Berhampur University || _______________________________ | Dr. R. K. Sahu (Project Guide) | Associate Professor, Dept. of CSA | Berhampur University
+============================================================
+
+============================================================
+Field Name || Data Type || Description
+id || String (UUID) || Unique identifier for the user account
+email || String || Registered email address (login credential)
+password || String || Bcrypt hashed password string
+shopDetails.name || String || Shop name printed on invoice headers
+shopDetails.phone || String || Shop contact number prefixed with +91
+shopDetails.address || String || Physical location of the pharmacy shop
+============================================================
+
+============================================================
+Field Name || Data Type || Description
+id || String (UUID) || Unique identifier for the medicine batch
+name || String || Brand or generic drug name (e.g., Amoxicillin)
+batchNumber || String || Manufacturer batch number (e.g., BNT-4592)
+stockQuantity || Number || Current physical stock level in pharmacy
+price || Number || Unit retail price in Rupees (INR)
+expiryDate || String (ISO) || Expiry date of the batch
+============================================================
