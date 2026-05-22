@@ -181,7 +181,8 @@ export async function createBill(req, res) {
         to: result.customerEmail,
         subject: emailSubject,
         text: emailText,
-        html: emailHtml
+        html: emailHtml,
+        fromName: storeDetails.name
       }).catch(err => {
         console.error('[Billing Email Error] Failed to send invoice email:', err.message);
       });

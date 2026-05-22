@@ -17,7 +17,7 @@ if (emailUser && emailPass) {
   console.log('[Email Service Warning] EMAIL_USER/EMAIL_PASS not configured. Simulator fallback.');
 }
 
-export async function sendEmail({ to, subject, text, html }) {
+export async function sendEmail({ to, subject, text, html, fromName }) {
   const emailApiUrl = process.env.EMAIL_API_URL;
   const usingEmailApi = !!emailApiUrl;
   const usingRealEmail = !!emailTransporter || usingEmailApi;
@@ -33,7 +33,8 @@ export async function sendEmail({ to, subject, text, html }) {
           to,
           subject,
           body: text,
-          htmlBody: html
+          htmlBody: html,
+          fromName: fromName || 'RxSmart Security'
         })
       });
 
@@ -52,16 +53,17 @@ export async function sendEmail({ to, subject, text, html }) {
       console.error(`[Email Service Error] Google Apps Script API connection failed:`, err.message);
       if (emailTransporter) {
         // Fallback to nodemailer
-        return await sendViaNodemailer(to, subject, text, html);
+        return await sendViaNodemailer(to, subject, text, html, fromName);
       }
       throw err;
     }
   } else if (emailTransporter) {
-    return await sendViaNodemailer(to, subject, text, html);
+    return await sendViaNodemailer(to, subject, text, html, fromName);
   } else {
     // Simulator Mode
     console.log(`\n==================================================`);
     console.log(`[EMAIL SIMULATION] TO: ${to}`);
+    console.log(`[EMAIL SIMULATION] FROM: ${fromName || 'RxSmart Security'}`);
     console.log(`[EMAIL SIMULATION] SUBJECT: ${subject}`);
     console.log(`[EMAIL SIMULATION] TEXT: ${text}`);
     console.log(`==================================================\n`);
@@ -69,10 +71,10 @@ export async function sendEmail({ to, subject, text, html }) {
   }
 }
 
-async function sendViaNodemailer(to, subject, text, html) {
+async function sendViaNodemailer(to, subject, text, html, fromName) {
   try {
     const mailOptions = {
-      from: `"RxSmart Security" <${emailUser}>`,
+      from: fromName ? `"${fromName}" <${emailUser}>` : `"RxSmart Security" <${emailUser}>`,
       to,
       subject,
       text,
