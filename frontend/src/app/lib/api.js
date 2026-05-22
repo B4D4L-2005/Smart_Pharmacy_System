@@ -239,6 +239,19 @@ export const api = {
         method: 'DELETE'
       });
     }
+  },
+
+  // DB Backup & Restore
+  db: {
+    async export() {
+      return await request('/db/export');
+    },
+    async import(dump) {
+      return await request('/db/import', {
+        method: 'POST',
+        body: JSON.stringify({ dbBackup: dump })
+      });
+    }
   }
 };
 export default api;

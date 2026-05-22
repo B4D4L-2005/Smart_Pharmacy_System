@@ -1,29 +1,11 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import nodemailer from 'nodemailer';
 import { db } from '../services/db.js';
+import { sendEmail } from '../services/emailService.js';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'pharmacy-super-secret-key-12345';
 const TOKEN_EXPIRY = '24h';
 
-let emailTransporter = null;
-const initEmailTransporter = () => {
-  const emailUser = process.env.EMAIL_USER;
-  const emailPass = process.env.EMAIL_PASS;
-  if (emailUser && emailPass) {
-    emailTransporter = nodemailer.createTransport({
-      service: 'gmail',
-      auth: {
-        user: emailUser,
-        pass: emailPass
-      }
-    });
-    console.log('[OTP] Email Transporter (Gmail) initialized successfully.');
-  } else {
-    console.log('[OTP Warning] EMAIL_USER and EMAIL_PASS environment variables are not configured. Email simulator active.');
-  }
-};
-initEmailTransporter();
 
 export async function signup(req, res) {
   try {
@@ -220,98 +202,54 @@ export async function sendOTP(req, res) {
     activeOTPs.set(emailKey, { code: otpCode, expires });
     console.log(`[OTP Simulation] Generated verification code ${otpCode} for ${email} (Key: ${emailKey})`);
 
-    let realEmailSent = false;
-    let emailErrorMessage = '';
-    const emailApiUrl = process.env.EMAIL_API_URL;
-    const usingEmailApi = !!emailApiUrl;
-    const usingRealEmail = !!emailTransporter || usingEmailApi;
-
-    const emailSubject = 'RxSmart Verification Code';
-    const emailText = `Your RxSmart pharmacy store verification code is ${otpCode}. Valid for 5 minutes.`;
+    const emailSubject = '🔐 RxSmart Verification OTP Code';
+    const emailText = `Your RxSmart verification code is: ${otpCode}. This code is valid for 5 minutes. Do not share this OTP with anyone.`;
     const emailHtml = `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px; background-color: #ffffff; color: #333333;">
-        <div style="text-align: center; border-bottom: 2px solid #6366f1; padding-bottom: 15px;">
-          <h2 style="color: #6366f1; margin: 0;">RxSmart Pharmacy Shop</h2>
-        </div>
-        <div style="padding: 20px 0;">
-          <p>Hello,</p>
-          <p>You requested a verification code to access the RxSmart Pharmacy Management System.</p>
-          <div style="text-align: center; margin: 30px 0;">
-            <span style="font-size: 32px; font-weight: 800; letter-spacing: 6px; padding: 10px 25px; border-radius: 6px; background-color: #f3f4f6; color: #111827; border: 1px dashed #d1d5db;">
-              ${otpCode}
-            </span>
+      <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 550px; margin: 20px auto; padding: 32px; border: 1px solid #e2e8f0; border-radius: 16px; background-color: #ffffff; color: #1e293b; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05);">
+        <div style="text-align: center; border-bottom: 2px solid #f1f5f9; padding-bottom: 24px; margin-bottom: 24px;">
+          <div style="display: inline-block; background-color: #e0f2fe; padding: 12px; border-radius: 12px; margin-bottom: 12px;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#0284c7" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display: block; margin: 0 auto;"><path d="m10.5 20.5 10-10a4.95 4.95 0 1 0-7-7l-10 10a4.95 4.95 0 1 0 7 7Z"/><path d="m8.5 8.5 7 7"/></svg>
           </div>
-          <p style="color: #ef4444; font-weight: bold;">This code is valid for 5 minutes.</p>
-          <p style="font-size: 13px; color: #6b7280; margin-top: 25px;">If you did not request this verification, please ignore this email.</p>
+          <h2 style="color: #0f172a; margin: 0; font-size: 22px; font-weight: 800; letter-spacing: -0.5px;">RxSmart Security</h2>
+          <p style="margin: 4px 0 0 0; font-size: 13px; color: #64748b; font-weight: 500;">Pharmacy Management System</p>
         </div>
-        <div style="border-top: 1px solid #e5e7eb; padding-top: 15px; text-align: center; font-size: 12px; color: #9ca3af;">
-          &copy; 2026 RxSmart Pharmacy Management System. All rights reserved.
+        <div>
+          <p style="font-size: 15px; line-height: 1.6; color: #334155; margin-top: 0;">Hello Store Owner,</p>
+          <p style="font-size: 15px; line-height: 1.6; color: #334155;">A request was made to verify your identity. Please use the following 6-digit One-Time Password (OTP) to log in or register your pharmacy store:</p>
+          
+          <div style="text-align: center; margin: 32px 0;">
+            <div style="display: inline-block; font-family: 'Courier New', Courier, monospace; font-size: 38px; font-weight: 800; letter-spacing: 8px; padding: 16px 36px; border-radius: 12px; background-color: #f8fafc; color: #0284c7; border: 1.5px dashed #cbd5e1; box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);">
+              ${otpCode}
+            </div>
+            <p style="font-size: 12px; color: #ef4444; font-weight: 700; margin-top: 12px; margin-bottom: 0;">⚠️ Valid for 5 minutes only</p>
+          </div>
+          
+          <div style="background-color: #f8fafc; border-left: 4px solid #0284c7; padding: 16px; border-radius: 0 12px 12px 0; margin-bottom: 24px;">
+            <p style="margin: 0; font-size: 12.5px; line-height: 1.5; color: #475569; font-weight: 500;">
+              <strong>Security Notice:</strong> Never share this verification code with anyone, including RxSmart employees. If you did not initiate this request, you can safely ignore this email.
+            </p>
+          </div>
+        </div>
+        <div style="border-top: 1px solid #f1f5f9; padding-top: 20px; text-align: center; font-size: 11px; color: #94a3b8; font-weight: 500;">
+          <p style="margin: 0 0 4px 0;">This is an automated security message from your pharmacy system.</p>
+          <p style="margin: 0;">&copy; 2026 RxSmart Pharmacy Inc. All rights reserved.</p>
         </div>
       </div>
     `;
 
-    if (usingEmailApi) {
-      try {
-        const response = await fetch(emailApiUrl, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            to: email,
-            subject: emailSubject,
-            body: emailText,
-            htmlBody: emailHtml
-          })
-        });
-
-        if (response.ok) {
-          const resData = await response.json();
-          if (resData.status === 'success') {
-            realEmailSent = true;
-            console.log(`[OTP] Sent verification email via Google Apps Script API successfully to ${email}`);
-          } else {
-            emailErrorMessage = resData.message || 'Apps Script returned error status';
-            console.error(`[OTP Error] Google Apps Script email dispatch failed:`, emailErrorMessage);
-          }
-        } else {
-          emailErrorMessage = `HTTP status ${response.status}: ${response.statusText}`;
-          console.error(`[OTP Error] Google Apps Script HTTP post failed:`, emailErrorMessage);
-        }
-      } catch (err) {
-        emailErrorMessage = err.message;
-        console.error(`[OTP Error] Google Apps Script API connection failed:`, err.message);
-      }
-    } else if (emailTransporter) {
-      try {
-        const mailOptions = {
-          from: `"RxSmart Security" <${process.env.EMAIL_USER}>`,
-          to: email,
-          subject: emailSubject,
-          text: emailText,
-          html: emailHtml
-        };
-        await emailTransporter.sendMail(mailOptions);
-        realEmailSent = true;
-        console.log(`[OTP] Sent verification email successfully to ${email}`);
-      } catch (err) {
-        emailErrorMessage = err.message;
-        console.error(`[OTP Error] Email dispatch failed:`, err.message);
-      }
-    }
-
-    if (usingRealEmail && !realEmailSent) {
-      return res.status(500).json({
-        message: `Failed to send email OTP to your address. Error details: ${emailErrorMessage || 'Unknown mail/API server response'}. Please verify your SMTP settings or EMAIL_API_URL in the Render Dashboard.`
-      });
-    }
+    const emailResult = await sendEmail({
+      to: email,
+      subject: emailSubject,
+      text: emailText,
+      html: emailHtml
+    });
 
     res.json({
-      message: realEmailSent 
-        ? `Verification code sent to ${email} successfully.` 
-        : `OTP sent to ${email} (Simulated).`,
-      isSimulated: !realEmailSent,
-      otpCode: realEmailSent ? undefined : otpCode
+      message: emailResult.isSimulated 
+        ? `OTP sent to ${email} (Simulated).`
+        : `Verification code sent to ${email} successfully.`,
+      isSimulated: emailResult.isSimulated,
+      otpCode: emailResult.isSimulated ? otpCode : undefined
     });
   } catch (error) {
     res.status(500).json({ message: 'Error generating OTP.', error: error.message });
@@ -433,40 +371,70 @@ export async function verifyOTPRegister(req, res) {
 
 export async function restoreUser(req, res) {
   try {
-    const { email, password, username, shopName, shopPhone, shopAddress, gstin } = req.body;
+    const { email, password, username, shopName, shopPhone, shopAddress, gstin, dbBackup } = req.body;
     if (!email || !username || !shopName || !shopPhone) {
       return res.status(400).json({ message: 'Missing parameters for user restoration.' });
     }
 
-    // Check if user already exists in db
-    const users = await db.users.raw();
-    const existingUser = users.find(u => (u.shopDetails?.phone && phonesMatch(u.shopDetails.phone, shopPhone)) || u.email === email.toLowerCase());
-    if (existingUser) {
-      return res.status(200).json({ message: 'User already exists, no restoration needed.', user: existingUser });
-    }
+    // 1. If full database backup is provided, import it
+    if (dbBackup) {
+      console.log('[Backup System] Restoring entire database from client backup...');
+      await db.importData(dbBackup);
+    } else {
+      // 2. Otherwise, check if user exists, and if not, restore just this user
+      const users = await db.users.raw();
+      const existingUser = users.find(u => (u.shopDetails?.phone && phonesMatch(u.shopDetails.phone, shopPhone)) || u.email === email.toLowerCase());
+      
+      if (!existingUser) {
+        let hashedPassword = password;
+        if (password && !password.startsWith('$2a$') && !password.startsWith('$2b$')) {
+          const salt = await bcrypt.genSalt(10);
+          hashedPassword = await bcrypt.hash(password, salt);
+        }
 
-    // Save user with shop details directly (password is already hashed in local backup)
-    let hashedPassword = password;
-    if (password && !password.startsWith('$2a$') && !password.startsWith('$2b$')) {
-      const salt = await bcrypt.genSalt(10);
-      hashedPassword = await bcrypt.hash(password, salt);
-    }
-
-    const newUser = await db.users.insert({
-      email: email.toLowerCase(),
-      password: hashedPassword || '',
-      username,
-      shopDetails: {
-        name: shopName,
-        phone: shopPhone,
-        address: shopAddress || '',
-        gstin: gstin || ''
+        await db.users.insert({
+          email: email.toLowerCase(),
+          password: hashedPassword || '',
+          username,
+          shopDetails: {
+            name: shopName,
+            phone: shopPhone,
+            address: shopAddress || '',
+            gstin: gstin || ''
+          }
+        });
       }
-    });
+    }
+
+    // Fetch the restored user to send back
+    const users = await db.users.raw();
+    const restoredUser = users.find(u => u.email === email.toLowerCase());
 
     console.log(`[Backup System] Restored user account for shop ${shopName} (${shopPhone})`);
-    res.status(201).json({ message: 'User restored successfully.', user: newUser });
+    res.status(201).json({ message: 'User restored successfully.', user: restoredUser });
   } catch (error) {
     res.status(500).json({ message: 'Error restoring user.', error: error.message });
+  }
+}
+
+export async function exportDatabase(req, res) {
+  try {
+    const dump = await db.exportData();
+    res.json(dump);
+  } catch (error) {
+    res.status(500).json({ message: 'Error exporting database.', error: error.message });
+  }
+}
+
+export async function importDatabase(req, res) {
+  try {
+    const { dump } = req.body;
+    if (!dump) {
+      return res.status(400).json({ message: 'Database dump is required.' });
+    }
+    await db.importData(dump);
+    res.json({ message: 'Database imported successfully.' });
+  } catch (error) {
+    res.status(500).json({ message: 'Error importing database.', error: error.message });
   }
 }

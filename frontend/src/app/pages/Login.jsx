@@ -8,12 +8,9 @@ export function Login({ onNavigate }) {
   const { loginWithOTP } = useAuth();
   const { showToast } = useNotification();
   
-  // OTP States
   const [email, setEmail] = useState('');
   const [otpCode, setOtpCode] = useState('');
   const [otpSent, setOtpSent] = useState(false);
-  const [whatsappLink, setWhatsappLink] = useState('');
-  
   const [loading, setLoading] = useState(false);
 
   const handleSendOTP = async (e) => {
@@ -33,8 +30,11 @@ export function Login({ onNavigate }) {
         if (err.message && (err.message.toLowerCase().includes('not registered') || err.message.toLowerCase().includes('not found') || err.message.toLowerCase().includes('not registered under any pharmacy store'))) {
           const backupDataStr = localStorage.getItem(`rxsmart_user_backup_${email.toLowerCase()}`);
           if (backupDataStr) {
-            console.log('[Auth] Render database reset detected. Restoring user store profile...');
+            console.log('[Auth] Render database reset detected. Restoring user store profile and database...');
             const backupData = JSON.parse(backupDataStr);
+            const dbBackupStr = localStorage.getItem(`rxsmart_db_backup_${email.toLowerCase()}`);
+            const dbBackup = dbBackupStr ? JSON.parse(dbBackupStr) : null;
+            
             await api.auth.restoreUser({
               email: backupData.email,
               password: backupData.password,
@@ -42,7 +42,8 @@ export function Login({ onNavigate }) {
               shopName: backupData.shopName,
               shopPhone: backupData.phoneNumber || backupData.shopPhone,
               shopAddress: backupData.shopAddress,
-              gstin: backupData.gstin
+              gstin: backupData.gstin,
+              dbBackup: dbBackup
             });
             // Retry sending OTP after restoration
             res = await api.auth.sendOTP(email, false);

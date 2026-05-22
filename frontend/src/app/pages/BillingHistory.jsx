@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../lib/api.js';
 import { useNotification } from '../context/NotificationContext.jsx';
+import { useAuth } from '../context/AuthContext.jsx';
 import { 
   Search, 
   Calendar, 
   Eye, 
-  Send, 
   Printer, 
   X, 
   RefreshCw,
@@ -14,6 +14,7 @@ import {
 
 export function BillingHistory({ selectedInvoiceId, setSelectedInvoiceId }) {
   const { showToast } = useNotification();
+  const { user } = useAuth();
   const [bills, setBills] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -50,19 +51,7 @@ export function BillingHistory({ selectedInvoiceId, setSelectedInvoiceId }) {
   const handleViewDetails = async (id) => {
     try {
       const data = await api.billing.get(id);
-      
-      // Re-create the WhatsApp link just in case
-      const storeDetails = { name: 'Care & Cure Pharmacy' };
-      const waMessage = `Hello ${data.customerName},\n\nThank you for choosing *${storeDetails.name}*!\n\nHere is your billing summary:\n*Invoice:* ${data.invoiceNumber}\n*Date:* ${new Date(data.date).toLocaleString()}\n*Total Amount:* ₹${data.finalTotal}\n\nWe look forward to serving you again. Stay healthy!\n\n_System generated message._`;
-      const prefilledText = encodeURIComponent(waMessage);
-      const waLink = data.customerPhone 
-        ? `https://wa.me/${data.customerPhone.replace(/[^0-9]/g, '')}?text=${prefilledText}`
-        : `https://wa.me/?text=${prefilledText}`;
-      
-      setViewBill({
-        ...data,
-        whatsappLink: waLink
-      });
+      setViewBill(data);
       setShowModal(true);
       // Reset selected ID in App parent so modal doesn't trigger repeatedly
       if (setSelectedInvoiceId) setSelectedInvoiceId(null);
@@ -242,10 +231,10 @@ export function BillingHistory({ selectedInvoiceId, setSelectedInvoiceId }) {
               }}
             >
               <div style={{ textAlign: 'center', marginBottom: '16px' }}>
-                <h2 style={{ margin: 0, fontSize: '14px', fontWeight: 'bold' }}>CARE & CURE PHARMACY</h2>
-                <p style={{ margin: '4px 0 0 0', fontSize: '9px' }}>12, MG Road, Bengaluru</p>
-                <p style={{ margin: '2px 0 0 0', fontSize: '9px' }}>Tel: +91 98765 43210</p>
-                <p style={{ margin: '2px 0 0 0', fontSize: '9px' }}>GSTIN: 29AAAAA1111A1Z1</p>
+                <h2 style={{ margin: 0, fontSize: '14px', fontWeight: 'bold' }}>{(user?.shopDetails?.name || 'CARE & CURE PHARMACY').toUpperCase()}</h2>
+                <p style={{ margin: '4px 0 0 0', fontSize: '9px' }}>{user?.shopDetails?.address || '12, MG Road, Bengaluru'}</p>
+                <p style={{ margin: '2px 0 0 0', fontSize: '9px' }}>Tel: {user?.shopDetails?.phone || '+91 98765 43210'}</p>
+                <p style={{ margin: '2px 0 0 0', fontSize: '9px' }}>GSTIN: {user?.shopDetails?.gstin || '29AAAAA1111A1Z1'}</p>
               </div>
 
               <div style={{ borderBottom: '1px dashed #1f2937', paddingBottom: '8px', marginBottom: '8px' }}>
@@ -253,6 +242,7 @@ export function BillingHistory({ selectedInvoiceId, setSelectedInvoiceId }) {
                 <div><strong>Date:</strong> {new Date(viewBill.date).toLocaleString()}</div>
                 <div><strong>Customer:</strong> {viewBill.customerName}</div>
                 {viewBill.customerPhone && <div><strong>Phone:</strong> {viewBill.customerPhone}</div>}
+                {viewBill.customerEmail && <div><strong>Email:</strong> {viewBill.customerEmail}</div>}
               </div>
 
               <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '8px', fontSize: '10px' }}>
@@ -291,23 +281,7 @@ export function BillingHistory({ selectedInvoiceId, setSelectedInvoiceId }) {
             </div>
 
             {/* Modal Actions */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: '8px' }}>
-              <a
-                href={viewBill.whatsappLink}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="glass-btn"
-                style={{
-                  background: '#25d366',
-                  color: '#ffffff',
-                  boxShadow: '0 4px 12px rgba(37, 211, 102, 0.25)',
-                  fontSize: '13px'
-                }}
-              >
-                <Send size={14} />
-                <span>Resend WhatsApp</span>
-              </a>
-
+            <div style={{ display: 'flex', gap: '12px', marginTop: '8px' }}>
               <button
                 onClick={() => {
                   const printContents = document.getElementById('reprint-bill').innerHTML;
@@ -332,8 +306,8 @@ export function BillingHistory({ selectedInvoiceId, setSelectedInvoiceId }) {
                   `);
                   printWindow.document.close();
                 }}
-                className="glass-btn glass-btn-secondary"
-                style={{ fontSize: '13px' }}
+                className="glass-btn glass-btn-primary"
+                style={{ width: '100%', fontSize: '13px' }}
               >
                 <Printer size={14} />
                 <span>Reprint Receipt</span>

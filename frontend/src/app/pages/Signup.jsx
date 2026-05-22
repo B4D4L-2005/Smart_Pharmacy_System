@@ -16,10 +16,8 @@ export function Signup({ onNavigate }) {
   const [shopPhone, setShopPhone] = useState('');
   const [shopAddress, setShopAddress] = useState('');
 
-  // OTP States
   const [otpSent, setOtpSent] = useState(false);
   const [otpCode, setOtpCode] = useState('');
-  const [whatsappLink, setWhatsappLink] = useState('');
  
   const handleSendOTP = async (e) => {
     e.preventDefault();

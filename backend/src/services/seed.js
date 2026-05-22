@@ -23,11 +23,14 @@ export async function seedDatabase() {
       console.log('[Seed] Admin user created (admin@pharmacy.com / admin123).');
     }
 
-    // 2. Seed medicines if empty
+    // 2. Seed medicines if empty or outdated (fewer than 30 items)
     const medicines = await db.medicines.raw();
-    if (medicines.length === 0) {
+    if (medicines.length < 30) {
+      console.log(`[Seed] Medicines database has only ${medicines.length} items. Seeding professional library of 60 items...`);
+      await db.medicines.saveAll([]); // Clear out outdated items to prevent duplicates
+
       const sampleMedicines = [
-        // Tablets
+        // TABLETS
         {
           name: 'Paracetamol 650mg (Dolo)',
           category: 'Tablet',
@@ -53,18 +56,6 @@ export async function seedDatabase() {
           availabilityStatus: 'In Stock'
         },
         {
-          name: 'Pantoprazole 40mg (Pan-D)',
-          category: 'Tablet',
-          brand: 'Alkem',
-          price: 155.00,
-          stockQuantity: 80,
-          manufactureDate: '2025-06-12',
-          expiryDate: '2027-05-31',
-          batchNumber: 'PD44321',
-          lowStockThreshold: 20,
-          availabilityStatus: 'In Stock'
-        },
-        {
           name: 'Azithromycin 500mg (Azee)',
           category: 'Tablet',
           brand: 'Cipla',
@@ -83,7 +74,7 @@ export async function seedDatabase() {
           price: 18.20,
           stockQuantity: 150,
           manufactureDate: '2024-04-10',
-          expiryDate: '2026-03-31', // Expired
+          expiryDate: '2026-03-31',
           batchNumber: 'CT11003',
           lowStockThreshold: 25,
           availabilityStatus: 'Expired'
@@ -113,7 +104,7 @@ export async function seedDatabase() {
           availabilityStatus: 'In Stock'
         },
         {
-          name: 'Combiflam',
+          name: 'Combiflam (Ibuprofen+Paracetamol)',
           category: 'Tablet',
           brand: 'Sanofi',
           price: 45.00,
@@ -136,12 +127,264 @@ export async function seedDatabase() {
           lowStockThreshold: 25,
           availabilityStatus: 'In Stock'
         },
-
-        // Capsules
         {
-          name: 'Amoxicillin 500mg',
+          name: 'Amoxicillin+Clavulanic 625mg (Augmentin)',
+          category: 'Tablet',
+          brand: 'GSK',
+          price: 204.50,
+          stockQuantity: 110,
+          manufactureDate: '2025-11-12',
+          expiryDate: '2027-10-31',
+          batchNumber: 'AU11204',
+          lowStockThreshold: 20,
+          availabilityStatus: 'In Stock'
+        },
+        {
+          name: 'Aceclofenac+Serratiopeptidase (Zerodol-SP)',
+          category: 'Tablet',
+          brand: 'Ipca Labs',
+          price: 138.00,
+          stockQuantity: 160,
+          manufactureDate: '2025-09-05',
+          expiryDate: '2027-08-31',
+          batchNumber: 'ZS88210',
+          lowStockThreshold: 30,
+          availabilityStatus: 'In Stock'
+        },
+        {
+          name: 'Diclofenac 100mg (Voveran SR)',
+          category: 'Tablet',
+          brand: 'Novartis',
+          price: 96.50,
+          stockQuantity: 120,
+          manufactureDate: '2025-08-01',
+          expiryDate: '2027-07-31',
+          batchNumber: 'VV33291',
+          lowStockThreshold: 25,
+          availabilityStatus: 'In Stock'
+        },
+        {
+          name: 'Paracetamol 500mg (Calpol)',
+          category: 'Tablet',
+          brand: 'GSK',
+          price: 16.80,
+          stockQuantity: 240,
+          manufactureDate: '2025-10-10',
+          expiryDate: '2027-09-30',
+          batchNumber: 'CP44810',
+          lowStockThreshold: 40,
+          availabilityStatus: 'In Stock'
+        },
+        {
+          name: 'Pantoprazole 40mg (Pantocid)',
+          category: 'Tablet',
+          brand: 'Sun Pharma',
+          price: 120.00,
+          stockQuantity: 130,
+          manufactureDate: '2025-07-15',
+          expiryDate: '2027-06-30',
+          batchNumber: 'PT77610',
+          lowStockThreshold: 25,
+          availabilityStatus: 'In Stock'
+        },
+        {
+          name: 'Ofloxacin+Ornidazole (O2)',
+          category: 'Tablet',
+          brand: 'Medley',
+          price: 145.00,
+          stockQuantity: 90,
+          manufactureDate: '2025-06-20',
+          expiryDate: '2027-05-31',
+          batchNumber: 'OO99104',
+          lowStockThreshold: 20,
+          availabilityStatus: 'In Stock'
+        },
+        {
+          name: 'Ciprofloxacin 500mg (Cifran)',
+          category: 'Tablet',
+          brand: 'Sun Pharma',
+          price: 48.90,
+          stockQuantity: 110,
+          manufactureDate: '2025-05-18',
+          expiryDate: '2027-04-30',
+          batchNumber: 'CF22019',
+          lowStockThreshold: 20,
+          availabilityStatus: 'In Stock'
+        },
+        {
+          name: 'Montelukast+Levocetirizine (Montair-LC)',
+          category: 'Tablet',
+          brand: 'Cipla',
+          price: 232.00,
+          stockQuantity: 140,
+          manufactureDate: '2025-09-12',
+          expiryDate: '2027-08-31',
+          batchNumber: 'ML55024',
+          lowStockThreshold: 25,
+          availabilityStatus: 'In Stock'
+        },
+        {
+          name: 'Calcium+Vit D3 (Shelcal 500)',
+          category: 'Tablet',
+          brand: 'Torrent',
+          price: 119.50,
+          stockQuantity: 180,
+          manufactureDate: '2025-10-15',
+          expiryDate: '2027-09-30',
+          batchNumber: 'SH11082',
+          lowStockThreshold: 30,
+          availabilityStatus: 'In Stock'
+        },
+        {
+          name: 'Neurobion Forte',
+          category: 'Tablet',
+          brand: 'Procter & Gamble',
+          price: 34.70,
+          stockQuantity: 350,
+          manufactureDate: '2025-08-20',
+          expiryDate: '2028-07-31',
+          batchNumber: 'NF88410',
+          lowStockThreshold: 50,
+          availabilityStatus: 'In Stock'
+        },
+        {
+          name: 'Clonidine 100mcg (Arkamin)',
+          category: 'Tablet',
+          brand: 'Unichem',
+          price: 68.50,
+          stockQuantity: 80,
+          manufactureDate: '2025-05-10',
+          expiryDate: '2027-04-30',
+          batchNumber: 'AR66104',
+          lowStockThreshold: 15,
+          availabilityStatus: 'In Stock'
+        },
+        {
+          name: 'Dexamethasone 0.5mg (Dexona)',
+          category: 'Tablet',
+          brand: 'Zydus Cadila',
+          price: 10.40,
+          stockQuantity: 200,
+          manufactureDate: '2025-11-01',
+          expiryDate: '2027-10-31',
+          batchNumber: 'DX33091',
+          lowStockThreshold: 30,
+          availabilityStatus: 'In Stock'
+        },
+        {
+          name: 'Prednisolone 5mg (Wysolone)',
+          category: 'Tablet',
+          brand: 'Pfizer',
+          price: 18.30,
+          stockQuantity: 150,
+          manufactureDate: '2025-10-12',
+          expiryDate: '2027-09-30',
+          batchNumber: 'WY22084',
+          lowStockThreshold: 25,
+          availabilityStatus: 'In Stock'
+        },
+        {
+          name: 'Allopurinol 100mg (Zyloric)',
+          category: 'Tablet',
+          brand: 'GSK',
+          price: 31.00,
+          stockQuantity: 100,
+          manufactureDate: '2025-07-01',
+          expiryDate: '2027-06-30',
+          batchNumber: 'ZY55091',
+          lowStockThreshold: 20,
+          availabilityStatus: 'In Stock'
+        },
+        {
+          name: 'Furosemide 40mg (Lasix)',
+          category: 'Tablet',
+          brand: 'Sanofi',
+          price: 15.20,
+          stockQuantity: 220,
+          manufactureDate: '2025-09-15',
+          expiryDate: '2027-08-31',
+          batchNumber: 'LX99014',
+          lowStockThreshold: 30,
+          availabilityStatus: 'In Stock'
+        },
+        {
+          name: 'Deriphyllin (Theophylline+Etofylline)',
+          category: 'Tablet',
+          brand: 'Zydus Cadila',
+          price: 49.00,
+          stockQuantity: 160,
+          manufactureDate: '2025-08-10',
+          expiryDate: '2027-07-31',
+          batchNumber: 'DR88210',
+          lowStockThreshold: 25,
+          availabilityStatus: 'In Stock'
+        },
+        {
+          name: 'Bisacodyl 5mg (Dulcolax)',
+          category: 'Tablet',
+          brand: 'Sanofi',
+          price: 14.50,
+          stockQuantity: 190,
+          manufactureDate: '2025-10-05',
+          expiryDate: '2027-09-30',
+          batchNumber: 'DX77801',
+          lowStockThreshold: 30,
+          availabilityStatus: 'In Stock'
+        },
+        {
+          name: 'Amlodipine 5mg (Amlopin)',
+          category: 'Tablet',
+          brand: 'Lupin',
+          price: 28.50,
+          stockQuantity: 170,
+          manufactureDate: '2025-06-15',
+          expiryDate: '2027-05-31',
+          batchNumber: 'AM55210',
+          lowStockThreshold: 25,
+          availabilityStatus: 'In Stock'
+        },
+        {
+          name: 'Ranitidine 150mg (Rantac)',
+          category: 'Tablet',
+          brand: 'J.B. Chemicals',
+          price: 42.00,
+          stockQuantity: 210,
+          manufactureDate: '2025-09-01',
+          expiryDate: '2027-08-31',
+          batchNumber: 'RT88301',
+          lowStockThreshold: 30,
+          availabilityStatus: 'In Stock'
+        },
+        {
+          name: 'Dicyclomine+Paracetamol (Cyclopam)',
+          category: 'Tablet',
+          brand: 'Indoco',
+          price: 54.00,
+          stockQuantity: 110,
+          manufactureDate: '2025-08-12',
+          expiryDate: '2027-07-31',
+          batchNumber: 'CY22091',
+          lowStockThreshold: 20,
+          availabilityStatus: 'In Stock'
+        },
+        {
+          name: 'Metronidazole 400mg (Metrogyl)',
+          category: 'Tablet',
+          brand: 'J.B. Chemicals',
+          price: 22.50,
+          stockQuantity: 180,
+          manufactureDate: '2025-07-20',
+          expiryDate: '2027-06-30',
+          batchNumber: 'MT44018',
+          lowStockThreshold: 30,
+          availabilityStatus: 'In Stock'
+        },
+
+        // CAPSULES
+        {
+          name: 'Amoxicillin 500mg (Novamox)',
           category: 'Capsule',
-          brand: 'Alkem',
+          brand: 'Cipla',
           price: 110.00,
           stockQuantity: 12,
           manufactureDate: '2025-05-15',
@@ -163,7 +406,7 @@ export async function seedDatabase() {
           availabilityStatus: 'In Stock'
         },
         {
-          name: 'Omeprazole 20mg',
+          name: 'Omeprazole 20mg (Omez)',
           category: 'Capsule',
           brand: 'Dr. Reddys',
           price: 58.00,
@@ -175,7 +418,19 @@ export async function seedDatabase() {
           availabilityStatus: 'In Stock'
         },
         {
-          name: 'Rabeprazole 20mg (Veloz-D)',
+          name: 'Pantoprazole+Domperidone (Pan-D)',
+          category: 'Capsule',
+          brand: 'Alkem',
+          price: 155.00,
+          stockQuantity: 80,
+          manufactureDate: '2025-06-12',
+          expiryDate: '2027-05-31',
+          batchNumber: 'PD44321',
+          lowStockThreshold: 20,
+          availabilityStatus: 'In Stock'
+        },
+        {
+          name: 'Rabeprazole+Domperidone (Veloz-D)',
           category: 'Capsule',
           brand: 'Torrent',
           price: 185.00,
@@ -187,19 +442,31 @@ export async function seedDatabase() {
           availabilityStatus: 'In Stock'
         },
         {
-          name: 'Rosuvastatin 10mg (Rosavas)',
+          name: 'Vitamin E 400mg (Evion 400)',
           category: 'Capsule',
-          brand: 'Sun Pharma',
-          price: 142.00,
-          stockQuantity: 40,
-          manufactureDate: '2025-06-01',
-          expiryDate: '2027-05-31',
-          batchNumber: 'RV33091',
-          lowStockThreshold: 15,
+          brand: 'Merck/P&G',
+          price: 32.70,
+          stockQuantity: 200,
+          manufactureDate: '2025-10-01',
+          expiryDate: '2028-09-30',
+          batchNumber: 'EV11420',
+          lowStockThreshold: 40,
+          availabilityStatus: 'In Stock'
+        },
+        {
+          name: 'Loperamide 2mg (Eldoper)',
+          category: 'Capsule',
+          brand: 'Micro Labs',
+          price: 19.50,
+          stockQuantity: 140,
+          manufactureDate: '2025-09-10',
+          expiryDate: '2027-08-31',
+          batchNumber: 'ED33081',
+          lowStockThreshold: 20,
           availabilityStatus: 'In Stock'
         },
 
-        // Syrups
+        // SYRUPS
         {
           name: 'Cough Syrup (Ascoril LS)',
           category: 'Syrup',
@@ -207,13 +474,13 @@ export async function seedDatabase() {
           price: 145.00,
           stockQuantity: 45,
           manufactureDate: '2025-08-10',
-          expiryDate: '2026-06-25', // Near expiry
+          expiryDate: '2026-06-25',
           batchNumber: 'AC77199',
           lowStockThreshold: 15,
           availabilityStatus: 'In Stock'
         },
         {
-          name: 'Gelusil (Antacid)',
+          name: 'Gelusil Antacid Syrup',
           category: 'Syrup',
           brand: 'Pfizer',
           price: 128.00,
@@ -225,7 +492,7 @@ export async function seedDatabase() {
           availabilityStatus: 'In Stock'
         },
         {
-          name: 'Grilinctus Cough Syrup',
+          name: 'Grilinctus BM Syrup',
           category: 'Syrup',
           brand: 'Franco-Indian',
           price: 135.00,
@@ -249,7 +516,7 @@ export async function seedDatabase() {
           availabilityStatus: 'Low Stock'
         },
         {
-          name: 'Cremaffin 225ml',
+          name: 'Cremaffin Mixed Fruit 225ml',
           category: 'Syrup',
           brand: 'Abbott',
           price: 260.00,
@@ -260,8 +527,32 @@ export async function seedDatabase() {
           lowStockThreshold: 10,
           availabilityStatus: 'In Stock'
         },
+        {
+          name: 'Benadryl Cough Formula 100ml',
+          category: 'Syrup',
+          brand: 'Kenvue',
+          price: 140.00,
+          stockQuantity: 70,
+          manufactureDate: '2025-11-20',
+          expiryDate: '2027-10-31',
+          batchNumber: 'BD33201',
+          lowStockThreshold: 15,
+          availabilityStatus: 'In Stock'
+        },
+        {
+          name: 'Corex Dx Syrup 100ml',
+          category: 'Syrup',
+          brand: 'Pfizer',
+          price: 148.00,
+          stockQuantity: 50,
+          manufactureDate: '2025-10-05',
+          expiryDate: '2027-09-30',
+          batchNumber: 'CX55102',
+          lowStockThreshold: 15,
+          availabilityStatus: 'In Stock'
+        },
 
-        // Injections
+        // INJECTIONS
         {
           name: 'Insulin Glargine (Lantus)',
           category: 'Injection',
@@ -275,7 +566,7 @@ export async function seedDatabase() {
           availabilityStatus: 'Low Stock'
         },
         {
-          name: 'Humalog (Insulin)',
+          name: 'Humalog (Insulin Lispro)',
           category: 'Injection',
           brand: 'Lilly',
           price: 840.00,
@@ -287,7 +578,7 @@ export async function seedDatabase() {
           availabilityStatus: 'Low Stock'
         },
         {
-          name: 'Monocef 1g',
+          name: 'Monocef 1g (Ceftriaxone)',
           category: 'Injection',
           brand: 'Aristo',
           price: 65.50,
@@ -299,7 +590,7 @@ export async function seedDatabase() {
           availabilityStatus: 'In Stock'
         },
         {
-          name: 'Dynapar AQ 1ml',
+          name: 'Dynapar AQ 1ml (Diclofenac)',
           category: 'Injection',
           brand: 'Troikaa',
           price: 35.00,
@@ -311,7 +602,7 @@ export async function seedDatabase() {
           availabilityStatus: 'In Stock'
         },
 
-        // Ointments / Gels
+        // OINTMENTS / GELS / CREAMS
         {
           name: 'Volini Pain Relief Gel',
           category: 'Ointment',
@@ -349,7 +640,7 @@ export async function seedDatabase() {
           availabilityStatus: 'In Stock'
         },
         {
-          name: 'Candid Cream 20g',
+          name: 'Candid Cream 20g (Clotrimazole)',
           category: 'Ointment',
           brand: 'Glenmark',
           price: 125.00,
@@ -358,6 +649,80 @@ export async function seedDatabase() {
           expiryDate: '2027-09-30',
           batchNumber: 'CD44102',
           lowStockThreshold: 15,
+          availabilityStatus: 'In Stock'
+        },
+        {
+          name: 'Diclofenac Gel (Omnigel)',
+          category: 'Ointment',
+          brand: 'Cipla',
+          price: 98.00,
+          stockQuantity: 100,
+          manufactureDate: '2025-11-15',
+          expiryDate: '2027-10-31',
+          batchNumber: 'OM66201',
+          lowStockThreshold: 20,
+          availabilityStatus: 'In Stock'
+        },
+        {
+          name: 'Mupirocin Ointment (Bactroban)',
+          category: 'Ointment',
+          brand: 'GSK',
+          price: 175.00,
+          stockQuantity: 60,
+          manufactureDate: '2025-10-20',
+          expiryDate: '2027-09-30',
+          batchNumber: 'BT44192',
+          lowStockThreshold: 15,
+          availabilityStatus: 'In Stock'
+        },
+        {
+          name: 'Clobetasol Cream (Tenovate)',
+          category: 'Ointment',
+          brand: 'GSK',
+          price: 45.00,
+          stockQuantity: 130,
+          manufactureDate: '2025-08-05',
+          expiryDate: '2027-07-31',
+          batchNumber: 'TN33094',
+          lowStockThreshold: 20,
+          availabilityStatus: 'In Stock'
+        },
+
+        // DROPS / SPRAYS / INHALERS
+        {
+          name: 'Salbutamol Inhaler (Asthalin)',
+          category: 'Inhaler',
+          brand: 'Cipla',
+          price: 158.00,
+          stockQuantity: 40,
+          manufactureDate: '2025-10-12',
+          expiryDate: '2027-09-30',
+          batchNumber: 'AS55301',
+          lowStockThreshold: 15,
+          availabilityStatus: 'In Stock'
+        },
+        {
+          name: 'Otrivin Nasal Spray',
+          category: 'Drops',
+          brand: 'Haleon',
+          price: 112.00,
+          stockQuantity: 95,
+          manufactureDate: '2025-11-01',
+          expiryDate: '2027-10-31',
+          batchNumber: 'OT88401',
+          lowStockThreshold: 20,
+          availabilityStatus: 'In Stock'
+        },
+        {
+          name: 'Ciprofloxacin Drops (Ciplox)',
+          category: 'Drops',
+          brand: 'Cipla',
+          price: 22.50,
+          stockQuantity: 140,
+          manufactureDate: '2025-09-10',
+          expiryDate: '2027-08-31',
+          batchNumber: 'CX11094',
+          lowStockThreshold: 25,
           availabilityStatus: 'In Stock'
         }
       ];

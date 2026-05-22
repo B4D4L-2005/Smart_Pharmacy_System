@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../lib/api.js';
 import { useNotification } from '../context/NotificationContext.jsx';
+import { useAuth } from '../context/AuthContext.jsx';
 import { 
   Plus, 
   Search, 
@@ -16,6 +17,7 @@ import {
 
 export function Medicines() {
   const { showToast, fetchAlerts } = useNotification();
+  const { backupDatabaseLocally } = useAuth();
   const [medicines, setMedicines] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -131,6 +133,9 @@ export function Medicines() {
       setShowModal(false);
       fetchMedicines();
       fetchAlerts(); // Sync notifications count
+      if (backupDatabaseLocally) {
+        backupDatabaseLocally();
+      }
     } catch (err) {
       showToast(err.message || 'Error processing medicine details.', 'danger');
     }
@@ -144,6 +149,9 @@ export function Medicines() {
         showToast('Medicine deleted from database.', 'success');
         fetchMedicines();
         fetchAlerts();
+        if (backupDatabaseLocally) {
+          backupDatabaseLocally();
+        }
       } catch (err) {
         showToast('Delete failed: ' + err.message, 'danger');
       }

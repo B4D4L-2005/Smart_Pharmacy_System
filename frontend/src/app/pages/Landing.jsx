@@ -130,7 +130,7 @@ export function Landing({ onNavigate }) {
             lineHeight: '1.6'
           }}
         >
-          Process customer orders quickly, keep track of medicine stocks, manage expiry alerts, and share invoices instantly over WhatsApp or SMS.
+          Process customer orders quickly, keep track of medicine stocks, manage expiry alerts, and share invoices instantly over Email or print receipts.
         </p>
 
         <div 

@@ -2,7 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { authenticateToken } from './src/middleware/auth.js';
-import { signup, login, getProfile, updateProfile, sendOTP, verifyOTPLogin, verifyOTPRegister, restoreUser } from './src/controllers/authController.js';
+import { signup, login, getProfile, updateProfile, sendOTP, verifyOTPLogin, verifyOTPRegister, restoreUser, exportDatabase, importDatabase } from './src/controllers/authController.js';
 import { createMedicine, getMedicines, getMedicineById, updateMedicine, deleteMedicine, triggerScan } from './src/controllers/medicineController.js';
 import { createBill, getBills, getBillById } from './src/controllers/billingController.js';
 import { getDashboardStats, getDetailedReports } from './src/controllers/reportController.js';
@@ -44,6 +44,10 @@ app.post('/api/auth/verify-otp-register', verifyOTPRegister);
 // Protected Profile routes
 app.get('/api/auth/profile', authenticateToken, getProfile);
 app.put('/api/auth/profile', authenticateToken, updateProfile);
+
+// Protected Database Sync routes
+app.get('/api/db/export', authenticateToken, exportDatabase);
+app.post('/api/db/import', authenticateToken, importDatabase);
 
 // Protected Medicines routes
 app.get('/api/medicines', authenticateToken, getMedicines);

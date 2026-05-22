@@ -43,8 +43,13 @@ async function writeCollection(collectionName, data) {
     const tempPath = `${filePath}.tmp`;
     
     const stringifiedData = JSON.stringify(data, null, 2);
-    await fs.writeFile(tempPath, stringifiedData, 'utf-8');
-    await fs.rename(tempPath, filePath);
+    try {
+      await fs.writeFile(tempPath, stringifiedData, 'utf-8');
+      await fs.rename(tempPath, filePath);
+    } catch (renameError) {
+      console.warn(`[DB Warning] Atomic rename failed for ${collectionName}, writing directly:`, renameError.message);
+      await fs.writeFile(filePath, stringifiedData, 'utf-8');
+    }
   });
 }
 

@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../lib/api.js';
 import { useNotification } from '../context/NotificationContext.jsx';
+import { useAuth } from '../context/AuthContext.jsx';
 import { 
   Search, 
   ShoppingCart, 
   Trash2, 
   User, 
   Phone, 
+  Mail,
   Plus, 
   Minus,
   Check,
@@ -17,12 +19,14 @@ import {
 
 export function Billing({ onInvoiceProcessed }) {
   const { showToast, fetchAlerts } = useNotification();
+  const { user, backupDatabaseLocally } = useAuth();
   const [medicines, setMedicines] = useState([]);
   const [search, setSearch] = useState('');
   
   // Customer details
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
+  const [customerEmail, setCustomerEmail] = useState('');
 
   // Cart state
   const [cart, setCart] = useState([]);
@@ -136,6 +140,7 @@ export function Billing({ onInvoiceProcessed }) {
       const payload = {
         customerName: customerName.trim() || 'Walk-in Customer',
         customerPhone: customerPhone.trim(),
+        customerEmail: customerEmail.trim(),
         items: cart,
         subtotal,
         discount,
@@ -151,9 +156,15 @@ export function Billing({ onInvoiceProcessed }) {
       setCart([]);
       setCustomerName('');
       setCustomerPhone('');
+      setCustomerEmail('');
       setDiscount(0);
       
       showToast('Checkout successful. Bill generated.', 'success');
+      
+      // Sync DB locally
+      if (backupDatabaseLocally) {
+        backupDatabaseLocally();
+      }
       
       // Refresh inventory and sync global warnings
       fetchInventory();
@@ -257,14 +268,14 @@ export function Billing({ onInvoiceProcessed }) {
                 </div>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                <label style={{ fontSize: '10px', fontWeight: '700', color: 'var(--text-muted)' }}>MOBILE NUMBER</label>
+                <label style={{ fontSize: '10px', fontWeight: '700', color: 'var(--text-muted)' }}>CUSTOMER EMAIL</label>
                 <div style={{ position: 'relative' }}>
-                  <Phone size={13} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+                  <Mail size={13} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
                   <input
-                    type="tel"
-                    placeholder="e.g. 9876543210"
-                    value={customerPhone}
-                    onChange={(e) => setCustomerPhone(e.target.value)}
+                    type="email"
+                    placeholder="customer@example.com"
+                    value={customerEmail}
+                    onChange={(e) => setCustomerEmail(e.target.value)}
                     className="glass-input"
                     style={{ paddingLeft: '34px', height: '38px', paddingTop: 0, paddingBottom: 0 }}
                   />
@@ -471,10 +482,10 @@ export function Billing({ onInvoiceProcessed }) {
               }}
             >
               <div style={{ textAlign: 'center', marginBottom: '16px' }}>
-                <h2 style={{ margin: 0, fontSize: '14px', fontWeight: 'bold' }}>CARE & CURE PHARMACY</h2>
-                <p style={{ margin: '4px 0 0 0', fontSize: '9px' }}>12, MG Road, Bengaluru</p>
-                <p style={{ margin: '2px 0 0 0', fontSize: '9px' }}>Tel: +91 98765 43210</p>
-                <p style={{ margin: '2px 0 0 0', fontSize: '9px' }}>GSTIN: 29AAAAA1111A1Z1</p>
+                <h2 style={{ margin: 0, fontSize: '14px', fontWeight: 'bold' }}>{(user?.shopDetails?.name || 'CARE & CURE PHARMACY').toUpperCase()}</h2>
+                <p style={{ margin: '4px 0 0 0', fontSize: '9px' }}>{user?.shopDetails?.address || '12, MG Road, Bengaluru'}</p>
+                <p style={{ margin: '2px 0 0 0', fontSize: '9px' }}>Tel: {user?.shopDetails?.phone || '+91 98765 43210'}</p>
+                <p style={{ margin: '2px 0 0 0', fontSize: '9px' }}>GSTIN: {user?.shopDetails?.gstin || '29AAAAA1111A1Z1'}</p>
               </div>
 
               <div style={{ borderBottom: '1px dashed #1f2937', paddingBottom: '8px', marginBottom: '8px' }}>
@@ -482,6 +493,7 @@ export function Billing({ onInvoiceProcessed }) {
                 <div><strong>Date:</strong> {new Date(invoiceResult.bill.date).toLocaleString()}</div>
                 <div><strong>Customer:</strong> {invoiceResult.bill.customerName}</div>
                 {invoiceResult.bill.customerPhone && <div><strong>Phone:</strong> {invoiceResult.bill.customerPhone}</div>}
+                {invoiceResult.bill.customerEmail && <div><strong>Email:</strong> {invoiceResult.bill.customerEmail}</div>}
               </div>
 
               <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '8px', fontSize: '10px' }}>
@@ -520,32 +532,11 @@ export function Billing({ onInvoiceProcessed }) {
             </div>
 
             {/* Modal Actions */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: '8px' }}>
-              {/* WhatsApp send click */}
-              <a
-                href={invoiceResult.whatsappLink}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="glass-btn"
-                style={{
-                  background: '#25d366',
-                  color: '#ffffff',
-                  boxShadow: '0 4px 12px rgba(37, 211, 102, 0.25)',
-                  fontSize: '13px'
-                }}
-              >
-                <Send size={14} />
-                <span>Send WhatsApp</span>
-              </a>
-
+            <div style={{ display: 'flex', gap: '12px', marginTop: '8px' }}>
               {/* Print Receipt */}
               <button
                 onClick={() => {
-                  // Standard print trigger
                   const printContents = document.getElementById('printable-bill').innerHTML;
-                  const originalContents = document.body.innerHTML;
-                  
-                  // Setup temporary print body styling
                   const printWindow = window.open('', '_blank');
                   printWindow.document.write(`
                     <html>
@@ -567,11 +558,11 @@ export function Billing({ onInvoiceProcessed }) {
                   `);
                   printWindow.document.close();
                 }}
-                className="glass-btn glass-btn-secondary"
-                style={{ fontSize: '13px' }}
+                className="glass-btn glass-btn-primary"
+                style={{ width: '100%', fontSize: '13px' }}
               >
                 <Printer size={14} />
-                <span>Print Bill</span>
+                <span>Print Invoice Receipt</span>
               </button>
             </div>
 
