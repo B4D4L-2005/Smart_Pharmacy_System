@@ -100,80 +100,7 @@ export async function createBill(req, res) {
     const user = req.user ? await db.users.findById(req.user.id) : null;
     const storeDetails = user?.shopDetails || (await db.users.find())[0]?.shopDetails || { name: 'Care & Cure Pharmacy', phone: '', address: '', gstin: '' };
     
-    // Construct text representation of purchase items
-    const itemLinesText = result.items.map((item, index) => {
-      return `${index + 1}. ${item.name} (Batch: ${item.batchNumber}) - Qty: ${item.quantity} - Price: ₹${item.price.toFixed(2)} - Total: ₹${item.total.toFixed(2)}`;
-    }).join('\n');
-
-    const emailSubject = `🧾 Invoice ${result.invoiceNumber} from ${storeDetails.name}`;
-    const emailText = `Dear ${result.customerName},\n\nThank you for shopping at ${storeDetails.name}.\n\nYour invoice ${result.invoiceNumber} details:\n${itemLinesText}\n\nGrand Total: ₹${result.finalTotal.toFixed(2)}\n\nStay healthy!`;
-
-    const emailHtml = `
-      <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 20px auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #ffffff; color: #1e293b; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);">
-        <div style="text-align: center; border-bottom: 2px solid #f1f5f9; padding-bottom: 16px; margin-bottom: 16px;">
-          <h2 style="color: #0f172a; margin: 0; font-size: 20px; font-weight: 800;">${storeDetails.name.toUpperCase()}</h2>
-          <p style="margin: 4px 0 0 0; font-size: 12px; color: #64748b;">${storeDetails.address || ''}</p>
-          <p style="margin: 2px 0 0 0; font-size: 12px; color: #64748b;">Tel: ${storeDetails.phone || ''} ${storeDetails.gstin ? ' | GSTIN: ' + storeDetails.gstin : ''}</p>
-        </div>
-        <div>
-          <p style="font-size: 14px; color: #334155; margin-top: 0;">Dear <strong>${result.customerName}</strong>,</p>
-          <p style="font-size: 14px; color: #334155;">Thank you for shopping at our pharmacy. Here is the receipt for your purchase:</p>
-          
-          <div style="background-color: #f8fafc; padding: 12px 16px; border-radius: 8px; margin-bottom: 16px; font-size: 13px;">
-            <div><strong>Invoice Number:</strong> ${result.invoiceNumber}</div>
-            <div><strong>Date:</strong> ${new Date(result.date).toLocaleString('en-IN')}</div>
-          </div>
-          
-          <table style="width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 13px;">
-            <thead>
-              <tr style="border-bottom: 2px solid #e2e8f0; font-weight: 700; color: #475569;">
-                <th style="text-align: left; padding: 8px 0;">Item</th>
-                <th style="text-align: right; padding: 8px 0; width: 60px;">Qty</th>
-                <th style="text-align: right; padding: 8px 0; width: 80px;">Price</th>
-                <th style="text-align: right; padding: 8px 0; width: 90px;">Total</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${result.items.map(item => `
-                <tr style="border-bottom: 1px solid #f1f5f9;">
-                  <td style="padding: 10px 0;"><strong>${item.name}</strong><br><span style="font-size: 11px; color: #64748b;">Batch: ${item.batchNumber}</span></td>
-                  <td style="text-align: right; padding: 10px 0;">${item.quantity}</td>
-                  <td style="text-align: right; padding: 10px 0;">₹${item.price.toFixed(2)}</td>
-                  <td style="text-align: right; padding: 10px 0;">₹${item.total.toFixed(2)}</td>
-                </tr>
-              `).join('')}
-            </tbody>
-          </table>
-          
-          <div style="border-top: 2px solid #e2e8f0; padding-top: 12px; text-align: right; font-size: 13px; line-height: 1.6;">
-            <div style="display: inline-block; width: 220px;">
-              <div style="display: flex; justify-content: space-between;">
-                <span>Subtotal:</span>
-                <span>₹${result.subtotal.toFixed(2)}</span>
-              </div>
-              ${result.discount > 0 ? `
-              <div style="display: flex; justify-content: space-between; color: #ef4444;">
-                <span>Discount:</span>
-                <span>-₹${result.discount.toFixed(2)}</span>
-              </div>
-              ` : ''}
-              <div style="display: flex; justify-content: space-between;">
-                <span>GST (${result.tax}%):</span>
-                <span>₹${((result.subtotal - result.discount) * (result.tax / 100)).toFixed(2)}</span>
-              </div>
-              <div style="display: flex; justify-content: space-between; font-size: 15px; font-weight: 800; border-top: 1px solid #cbd5e1; padding-top: 6px; margin-top: 6px; color: #0284c7;">
-                <span>Grand Total:</span>
-                <span>₹${result.finalTotal.toFixed(2)}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div style="border-top: 1px solid #f1f5f9; padding-top: 16px; margin-top: 20px; text-align: center; font-size: 12px; color: #94a3b8;">
-          <p style="margin: 0 0 4px 0;">Thank you for shopping! Stay healthy.</p>
-          <p style="margin: 0;">&copy; 2026 ${storeDetails.name.toUpperCase()}. All rights reserved.</p>
-        </div>
-      </div>
-    `;
+    const { emailSubject, emailText, emailHtml } = generateInvoiceEmailContent(result, storeDetails);
 
     if (result.customerEmail) {
       logDelivery(result.id, result.customerEmail, result.customerName, emailText, 'email');
@@ -198,6 +125,86 @@ export async function createBill(req, res) {
   }
 }
 
+// Helper to generate Invoice email content (text & HTML)
+function generateInvoiceEmailContent(bill, storeDetails) {
+  // Construct text representation of purchase items
+  const itemLinesText = bill.items.map((item, index) => {
+    return `${index + 1}. ${item.name} (Batch: ${item.batchNumber}) - Qty: ${item.quantity} - Price: ₹${item.price.toFixed(2)} - Total: ₹${item.total.toFixed(2)}`;
+  }).join('\n');
+
+  const emailSubject = `🧾 Invoice ${bill.invoiceNumber} from ${storeDetails.name}`;
+  const emailText = `Dear ${bill.customerName},\n\nThank you for shopping at ${storeDetails.name}.\n\nYour invoice ${bill.invoiceNumber} details:\n${itemLinesText}\n\nGrand Total: ₹${bill.finalTotal.toFixed(2)}\n\nStay healthy!`;
+
+  const emailHtml = `
+    <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 20px auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #ffffff; color: #1e293b; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);">
+      <div style="text-align: center; border-bottom: 2px solid #f1f5f9; padding-bottom: 16px; margin-bottom: 16px;">
+        <h2 style="color: #0f172a; margin: 0; font-size: 20px; font-weight: 800;">${storeDetails.name.toUpperCase()}</h2>
+        <p style="margin: 4px 0 0 0; font-size: 12px; color: #64748b;">${storeDetails.address || ''}</p>
+        <p style="margin: 2px 0 0 0; font-size: 12px; color: #64748b;">Tel: ${storeDetails.phone || ''} ${storeDetails.gstin ? ' | GSTIN: ' + storeDetails.gstin : ''}</p>
+      </div>
+      <div>
+        <p style="font-size: 14px; color: #334155; margin-top: 0;">Dear <strong>${bill.customerName}</strong>,</p>
+        <p style="font-size: 14px; color: #334155;">Thank you for shopping at our pharmacy. Here is the receipt for your purchase:</p>
+        
+        <div style="background-color: #f8fafc; padding: 12px 16px; border-radius: 8px; margin-bottom: 16px; font-size: 13px;">
+          <div><strong>Invoice Number:</strong> ${bill.invoiceNumber}</div>
+          <div><strong>Date:</strong> ${new Date(bill.date).toLocaleString('en-IN')}</div>
+        </div>
+        
+        <table style="width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 13px;">
+          <thead>
+            <tr style="border-bottom: 2px solid #e2e8f0; font-weight: 700; color: #475569;">
+              <th style="text-align: left; padding: 8px 0;">Item</th>
+              <th style="text-align: right; padding: 8px 0; width: 60px;">Qty</th>
+              <th style="text-align: right; padding: 8px 0; width: 80px;">Price</th>
+              <th style="text-align: right; padding: 8px 0; width: 90px;">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${bill.items.map(item => `
+              <tr style="border-bottom: 1px solid #f1f5f9;">
+                <td style="padding: 10px 0;"><strong>${item.name}</strong><br><span style="font-size: 11px; color: #64748b;">Batch: ${item.batchNumber}</span></td>
+                <td style="text-align: right; padding: 10px 0;">${item.quantity}</td>
+                <td style="text-align: right; padding: 10px 0;">₹${item.price.toFixed(2)}</td>
+                <td style="text-align: right; padding: 10px 0;">₹${item.total.toFixed(2)}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+        
+        <div style="border-top: 2px solid #e2e8f0; padding-top: 12px; text-align: right; font-size: 13px; line-height: 1.6;">
+          <div style="display: inline-block; width: 220px;">
+            <div style="display: flex; justify-content: space-between;">
+              <span>Subtotal:</span>
+              <span>₹${bill.subtotal.toFixed(2)}</span>
+            </div>
+            ${bill.discount > 0 ? `
+            <div style="display: flex; justify-content: space-between; color: #ef4444;">
+              <span>Discount:</span>
+              <span>-₹${bill.discount.toFixed(2)}</span>
+            </div>
+            ` : ''}
+            <div style="display: flex; justify-content: space-between;">
+              <span>GST (${bill.tax}%):</span>
+              <span>₹${((bill.subtotal - bill.discount) * (bill.tax / 100)).toFixed(2)}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; font-size: 15px; font-weight: 800; border-top: 1px solid #cbd5e1; padding-top: 6px; margin-top: 6px; color: #0284c7;">
+              <span>Grand Total:</span>
+              <span>₹${bill.finalTotal.toFixed(2)}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div style="border-top: 1px solid #f1f5f9; padding-top: 16px; margin-top: 20px; text-align: center; font-size: 12px; color: #94a3b8;">
+        <p style="margin: 0 0 4px 0;">Thank you for shopping! Stay healthy.</p>
+        <p style="margin: 0;">&copy; 2026 ${storeDetails.name.toUpperCase()}. All rights reserved.</p>
+      </div>
+    </div>
+  `;
+
+  return { emailSubject, emailText, emailHtml };
+}
+
 export async function getBills(req, res) {
   try {
     const { search, startDate, endDate } = req.query;
@@ -218,7 +225,6 @@ export async function getBills(req, res) {
     }
 
     if (endDate) {
-      // Set end date to end of that day (23:59:59.999)
       const end = new Date(endDate);
       end.setHours(23, 59, 59, 999);
       bills = bills.filter(bill => new Date(bill.date) <= end);
@@ -242,5 +248,53 @@ export async function getBillById(req, res) {
     res.json(bill);
   } catch (error) {
     res.status(500).json({ message: 'Error retrieving invoice.', error: error.message });
+  }
+}
+
+export async function sendBillEmail(req, res) {
+  try {
+    const { email } = req.body;
+    const bill = await db.bills.findById(req.params.id);
+    if (!bill) {
+      return res.status(404).json({ message: 'Invoice not found.' });
+    }
+
+    const targetEmail = email ? email.trim() : bill.customerEmail;
+    if (!targetEmail) {
+      return res.status(400).json({ message: 'No customer email address on file. Please specify an email address.' });
+    }
+
+    const user = req.user ? await db.users.findById(req.user.id) : null;
+    const storeDetails = user?.shopDetails || (await db.users.find())[0]?.shopDetails || { name: 'Care & Cure Pharmacy', phone: '', address: '', gstin: '' };
+
+    const { emailSubject, emailText, emailHtml } = generateInvoiceEmailContent(bill, storeDetails);
+
+    // Save/update email address in the bill database
+    if (email && email.trim() !== bill.customerEmail) {
+      await db.bills.update(bill.id, {
+        customerEmail: email.trim()
+      });
+    }
+
+    logDelivery(bill.id, targetEmail, bill.customerName, emailText, 'email');
+
+    const emailResult = await sendEmail({
+      to: targetEmail,
+      subject: emailSubject,
+      text: emailText,
+      html: emailHtml,
+      fromName: storeDetails.name
+    });
+
+    res.json({
+      message: emailResult.isSimulated
+        ? `Invoice email sent to ${targetEmail} (Simulated).`
+        : `Invoice email sent to ${targetEmail} successfully.`,
+      isSimulated: emailResult.isSimulated,
+      updatedEmail: targetEmail
+    });
+
+  } catch (error) {
+    res.status(500).json({ message: 'Error sending invoice email.', error: error.message });
   }
 }

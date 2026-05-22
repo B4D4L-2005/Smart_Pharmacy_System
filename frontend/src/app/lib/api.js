@@ -195,6 +195,13 @@ export const api = {
 
     async get(id) {
       return await request(`/billing/${id}`);
+    },
+
+    async sendEmail(id, email) {
+      return await request(`/billing/${id}/send-email`, {
+        method: 'POST',
+        body: JSON.stringify({ email })
+      });
     }
   },
 

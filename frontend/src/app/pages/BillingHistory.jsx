@@ -9,12 +9,14 @@ import {
   Printer, 
   X, 
   RefreshCw,
-  AlertCircle
+  AlertCircle,
+  Mail,
+  Send
 } from 'lucide-react';
 
 export function BillingHistory({ selectedInvoiceId, setSelectedInvoiceId }) {
   const { showToast } = useNotification();
-  const { user } = useAuth();
+  const { user, backupDatabaseLocally } = useAuth();
   const [bills, setBills] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -26,6 +28,8 @@ export function BillingHistory({ selectedInvoiceId, setSelectedInvoiceId }) {
   // Selected Bill details for Modal popup view
   const [viewBill, setViewBill] = useState(null);
   const [showModal, setShowModal] = useState(false);
+  const [emailToSend, setEmailToSend] = useState('');
+  const [sendingEmail, setSendingEmail] = useState(false);
 
   const fetchBills = async () => {
     try {
@@ -52,6 +56,7 @@ export function BillingHistory({ selectedInvoiceId, setSelectedInvoiceId }) {
     try {
       const data = await api.billing.get(id);
       setViewBill(data);
+      setEmailToSend(data.customerEmail || '');
       setShowModal(true);
       // Reset selected ID in App parent so modal doesn't trigger repeatedly
       if (setSelectedInvoiceId) setSelectedInvoiceId(null);
@@ -66,6 +71,36 @@ export function BillingHistory({ selectedInvoiceId, setSelectedInvoiceId }) {
       handleViewDetails(selectedInvoiceId);
     }
   }, [selectedInvoiceId]);
+
+  const handleSendEmail = async () => {
+    if (!emailToSend.trim()) {
+      showToast('Please enter a valid email address.', 'warning');
+      return;
+    }
+    try {
+      setSendingEmail(true);
+      const res = await api.billing.sendEmail(viewBill.id, emailToSend.trim());
+      showToast(res.message || 'Invoice email sent successfully.', 'success');
+      
+      // Update local viewBill state with the new email
+      setViewBill(prev => ({
+        ...prev,
+        customerEmail: emailToSend.trim()
+      }));
+
+      // Update the invoice in the list of bills too, so it reflects in the table
+      setBills(prev => prev.map(b => b.id === viewBill.id ? { ...b, customerEmail: emailToSend.trim() } : b));
+
+      // Trigger local DB backup to sync any email updates
+      if (backupDatabaseLocally) {
+        backupDatabaseLocally();
+      }
+    } catch (err) {
+      showToast(err.message || 'Failed to send invoice email.', 'danger');
+    } finally {
+      setSendingEmail(false);
+    }
+  };
 
   return (
     <div className="animate-fade-in" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
@@ -277,6 +312,33 @@ export function BillingHistory({ selectedInvoiceId, setSelectedInvoiceId }) {
 
               <div style={{ textAlign: 'center', marginTop: '16px', borderTop: '1px dashed #1f2937', paddingTop: '8px', fontSize: '8px' }}>
                 Thank you! Stay healthy.<br />System Generated Receipt
+              </div>
+            </div>
+
+            {/* Send Email Section */}
+            <div style={{ borderTop: '1px solid var(--border-glass)', paddingTop: '14px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <label style={{ fontSize: '10px', fontWeight: '700', color: 'var(--text-muted)' }}>SEND BILL TO CUSTOMER EMAIL</label>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <div style={{ position: 'relative', flex: 1 }}>
+                  <Mail size={13} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+                  <input
+                    type="email"
+                    placeholder="customer@example.com"
+                    value={emailToSend}
+                    onChange={(e) => setEmailToSend(e.target.value)}
+                    className="glass-input"
+                    style={{ paddingLeft: '30px', height: '36px', fontSize: '12px', width: '100%', boxSizing: 'border-box' }}
+                  />
+                </div>
+                <button
+                  onClick={handleSendEmail}
+                  disabled={sendingEmail}
+                  className="glass-btn glass-btn-primary"
+                  style={{ height: '36px', padding: '0 16px', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}
+                >
+                  <Send size={12} />
+                  <span>{sendingEmail ? 'Sending...' : 'Send'}</span>
+                </button>
               </div>
             </div>
 

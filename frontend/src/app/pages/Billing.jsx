@@ -36,6 +36,8 @@ export function Billing({ onInvoiceProcessed }) {
   // Receipt Modal State
   const [invoiceResult, setInvoiceResult] = useState(null);
   const [showReceipt, setShowReceipt] = useState(false);
+  const [emailToSend, setEmailToSend] = useState('');
+  const [sendingEmail, setSendingEmail] = useState(false);
 
   // Fetch medicines catalog (only items that are in stock and not expired)
   const fetchInventory = async () => {
@@ -150,6 +152,7 @@ export function Billing({ onInvoiceProcessed }) {
 
       const res = await api.billing.create(payload);
       setInvoiceResult(res);
+      setEmailToSend(res.bill.customerEmail || '');
       setShowReceipt(true);
       
       // Clear Cart & inputs
@@ -174,6 +177,36 @@ export function Billing({ onInvoiceProcessed }) {
       if (onInvoiceProcessed) onInvoiceProcessed();
     } catch (err) {
       showToast(err.message || 'Billing failed. Check stock levels.', 'danger');
+    }
+  };
+
+  const handleSendEmail = async () => {
+    if (!emailToSend.trim()) {
+      showToast('Please enter a valid email address.', 'warning');
+      return;
+    }
+    try {
+      setSendingEmail(true);
+      const res = await api.billing.sendEmail(invoiceResult.bill.id, emailToSend.trim());
+      showToast(res.message || 'Invoice email sent successfully.', 'success');
+      
+      // Update local invoiceResult state with the new email
+      setInvoiceResult(prev => ({
+        ...prev,
+        bill: {
+          ...prev.bill,
+          customerEmail: emailToSend.trim()
+        }
+      }));
+
+      // Trigger local DB backup to sync any email updates
+      if (backupDatabaseLocally) {
+        backupDatabaseLocally();
+      }
+    } catch (err) {
+      showToast(err.message || 'Failed to send invoice email.', 'danger');
+    } finally {
+      setSendingEmail(false);
     }
   };
 
@@ -528,6 +561,33 @@ export function Billing({ onInvoiceProcessed }) {
 
               <div style={{ textAlign: 'center', marginTop: '16px', borderTop: '1px dashed #1f2937', paddingTop: '8px', fontSize: '8px' }}>
                 Thank you! Stay healthy.<br />System Generated Receipt
+              </div>
+            </div>
+
+            {/* Send Email Section */}
+            <div style={{ borderTop: '1px solid var(--border-glass)', paddingTop: '14px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <label style={{ fontSize: '10px', fontWeight: '700', color: 'var(--text-muted)' }}>SEND BILL TO CUSTOMER EMAIL</label>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <div style={{ position: 'relative', flex: 1 }}>
+                  <Mail size={13} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+                  <input
+                    type="email"
+                    placeholder="customer@example.com"
+                    value={emailToSend}
+                    onChange={(e) => setEmailToSend(e.target.value)}
+                    className="glass-input"
+                    style={{ paddingLeft: '30px', height: '36px', fontSize: '12px', width: '100%', boxSizing: 'border-box' }}
+                  />
+                </div>
+                <button
+                  onClick={handleSendEmail}
+                  disabled={sendingEmail}
+                  className="glass-btn glass-btn-primary"
+                  style={{ height: '36px', padding: '0 16px', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}
+                >
+                  <Send size={12} />
+                  <span>{sendingEmail ? 'Sending...' : 'Send'}</span>
+                </button>
               </div>
             </div>
 

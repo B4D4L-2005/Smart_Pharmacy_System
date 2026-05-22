@@ -4,7 +4,7 @@ import dotenv from 'dotenv';
 import { authenticateToken } from './src/middleware/auth.js';
 import { signup, login, getProfile, updateProfile, sendOTP, verifyOTPLogin, verifyOTPRegister, restoreUser, exportDatabase, importDatabase } from './src/controllers/authController.js';
 import { createMedicine, getMedicines, getMedicineById, updateMedicine, deleteMedicine, triggerScan } from './src/controllers/medicineController.js';
-import { createBill, getBills, getBillById } from './src/controllers/billingController.js';
+import { createBill, getBills, getBillById, sendBillEmail } from './src/controllers/billingController.js';
 import { getDashboardStats, getDetailedReports } from './src/controllers/reportController.js';
 import { getNotifications, markAsRead, markAllAsRead, deleteNotification, clearAllNotifications } from './src/controllers/notificationController.js';
 import { seedDatabase } from './src/services/seed.js';
@@ -61,6 +61,7 @@ app.post('/api/medicines/scan', authenticateToken, triggerScan);
 app.post('/api/billing', authenticateToken, createBill);
 app.get('/api/billing', authenticateToken, getBills);
 app.get('/api/billing/:id', authenticateToken, getBillById);
+app.post('/api/billing/:id/send-email', authenticateToken, sendBillEmail);
 
 // Protected Reports/Dashboard routes
 app.get('/api/reports/dashboard', authenticateToken, getDashboardStats);
